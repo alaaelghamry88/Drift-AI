@@ -27,3 +27,7 @@ export interface LinkAssessment {
 export interface StoredLinkAssessment extends LinkAssessment {
   assessedAt: string // ISO date string — set client-side at persist time
 }
+
+export interface StoredVerdict extends Verdict {
+  messages: { role: 'user' | 'assistant'; content: string }[]
+}
