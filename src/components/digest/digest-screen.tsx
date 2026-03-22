@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
@@ -13,6 +13,8 @@ import { RelevanceScore } from '@/components/ui/relevance-score'
 import { DoneState } from '@/components/digest/done-state'
 import { useStreaming } from '@/hooks/use-streaming'
 import { cn } from '@/lib/utils'
+import { LinkDropInput } from '@/components/ui/link-drop'
+import type { StoredLinkAssessment } from '@/types/verdict'
 
 interface DigestScreenProps {
   profile: DriftProfile
@@ -295,6 +297,23 @@ export function DigestScreen({ profile }: DigestScreenProps) {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [savedLinks, setSavedLinks] = useState<StoredLinkAssessment[]>([])
+  const [savedLinksOpen, setSavedLinksOpen] = useState(true)
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        const raw = localStorage.getItem('drift_drop_history')
+        const all: StoredLinkAssessment[] = raw ? JSON.parse(raw) : []
+        setSavedLinks(all.filter(item => item.save_to_digest))
+      } catch {
+        // localStorage unavailable
+      }
+    }
+    read()
+    window.addEventListener('focus', read)
+    return () => window.removeEventListener('focus', read)
+  }, [])
 
   const isDone = cards.length > 0 && cards.every(c => {
     const a = actions[c.id]
@@ -380,6 +399,61 @@ export function DigestScreen({ profile }: DigestScreenProps) {
             )}
           </div>
           <div className="mt-5 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
+        </div>
+      )}
+
+      <LinkDropInput profile={profile} />
+
+      {/* Saved Links */}
+      {savedLinks.length > 0 && (
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+          <button
+            onClick={() => setSavedLinksOpen(prev => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <span className="text-label text-drift-text-tertiary tracking-[0.08em]">Saved Links</span>
+            <ChevronDown className={cn(
+              'w-4 h-4 text-drift-text-tertiary transition-transform duration-200',
+              savedLinksOpen && 'rotate-180'
+            )} />
+          </button>
+          <AnimatePresence>
+            {savedLinksOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-white/[0.06] divide-y divide-white/[0.04]">
+                  {savedLinks.map(item => (
+                    <div key={item.assessedAt} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="text-body-sm text-drift-text-secondary flex-1 truncate">
+                        {item.title}
+                      </span>
+                      <span className={cn(
+                        'text-label px-2 py-0.5 rounded-md border shrink-0',
+                        item.verdict === 'worth_your_time' && 'text-drift-accent bg-drift-accent/10 border-drift-accent/25',
+                        item.verdict === 'save_for_later' && 'text-amber-400 bg-amber-400/10 border-amber-400/25',
+                        item.verdict === 'skip' && 'text-white/40 bg-white/[0.04] border-white/[0.07]',
+                      )}>
+                        {item.verdict === 'worth_your_time' ? 'Worth it' : item.verdict === 'save_for_later' ? 'Save' : 'Skip'}
+                      </span>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-drift-text-tertiary hover:text-drift-text-secondary transition-colors shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
