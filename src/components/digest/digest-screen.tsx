@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Bookmark, X, ChevronDown, ExternalLink,
+  Bookmark, Eye, ChevronDown, ExternalLink,
   Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
@@ -117,15 +117,15 @@ function DigestCardItem({
   }, [isExpanded, card, profile, onToggleExpand, stream, reset])
 
   const isSaved = action === 'save'
-  const isSkipped = action === 'skip'
+  const isRead = action === 'read'
 
   return (
     <motion.div
       layout
-      exit={{ opacity: 0, x: isSkipped ? -40 : 0, scale: 0.98 }}
+      exit={{ opacity: 0, x: isRead ? -40 : 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <DriftCard glowing={isSaved} className={cn(isSkipped && 'opacity-40 pointer-events-none', 'relative overflow-hidden')}>
+      <DriftCard glowing={isSaved} className={cn(isRead && 'opacity-40 pointer-events-none', 'relative overflow-hidden')}>
 
         {/* Top type-colour accent line */}
         <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.topAccent)} />
@@ -236,10 +236,10 @@ function DigestCardItem({
             )}
 
             <button
-              onClick={() => onAction(card.id, 'skip')}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
+              onClick={() => onAction(card.id, 'read')}
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 transition-all duration-200"
             >
-              <X className="w-3.5 h-3.5" />
+              <Eye className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -258,7 +258,7 @@ export function DigestScreen({ profile }: DigestScreenProps) {
 
   const isDone = cards.length > 0 && cards.every(c => {
     const a = actions[c.id]
-    return a === 'save' || a === 'skip'
+    return a === 'save' || a === 'read'
   })
 
   const fetchDigest = useCallback(async () => {

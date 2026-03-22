@@ -1,6 +1,6 @@
 'use client'
 
-import { Bookmark, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Bookmark, Eye, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { CardAction } from '@/types/digest'
@@ -29,7 +29,7 @@ export function CardActions({ cardId, action, isExpanded, onAction, onGoDeeper }
             ? 'text-drift-accent border-drift-accent/30 bg-drift-accent/10'
             : 'text-drift-muted border-white/10 bg-white/5'
         )}>
-          {action === 'save' ? 'Saved' : 'Skipped'}
+          {action === 'save' ? 'Saved' : 'Read'}
         </span>
       </motion.div>
     )
@@ -50,15 +50,15 @@ export function CardActions({ cardId, action, isExpanded, onAction, onGoDeeper }
       </button>
 
       <button
-        onClick={() => onAction('skip')}
+        onClick={() => onAction('read')}
         className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center',
-          'text-drift-text-tertiary hover:text-drift-muted hover:bg-white/5',
+          'text-drift-text-tertiary hover:text-drift-text-secondary hover:bg-white/5',
           'transition-all duration-200'
         )}
-        title="Skip"
+        title="Mark as read"
       >
-        <X className="w-4 h-4" strokeWidth={1.5} />
+        <Eye className="w-4 h-4" strokeWidth={1.5} />
       </button>
 
       <div className="flex-1" />

@@ -51,7 +51,7 @@ export interface SkillMetadata {
   learning_path?: string
 }
 
-export type CardAction = 'save' | 'skip' | 'go_deeper'
+export type CardAction = 'save' | 'read' | 'go_deeper'
 
 export interface DigestState {
   cards: DigestCard[]
