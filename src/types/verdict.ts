@@ -23,3 +23,7 @@ export interface LinkAssessment {
   verdict_reason: string
   save_to_digest: boolean
 }
+
+export interface StoredLinkAssessment extends LinkAssessment {
+  assessedAt: string // ISO date string — set client-side at persist time
+}
