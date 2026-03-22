@@ -68,13 +68,13 @@
 ---
 
 ## Phase 7 — Polish
-- [ ] Page transitions (Framer Motion `pageFade`)
-- [ ] Background atmosphere — slow gradient animation + noise texture
-- [ ] Mobile responsive layout + bottom navigation
-- [ ] Loading and skeleton states for all async content
-- [ ] Error states — failed fetch, API timeout
-- [ ] Empty states — first visit before digest generates
-- [ ] Final QA across all screens
+- [x] Page transitions (Framer Motion `pageFade`)
+- [x] Background atmosphere — slow gradient animation + noise texture
+- [x] Mobile responsive layout + bottom navigation
+- [x] Loading and skeleton states for all async content
+- [x] Error states — failed fetch, API timeout
+- [x] Empty states — first visit before digest generates
+- [x] Final QA across all screens
 
 ---
 
