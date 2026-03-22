@@ -30,11 +30,13 @@ Two tabs managed by local React state:
 - Always visible at the top of the tab, regardless of whether a conversation is active.
 - Placeholder: *"Ask about a tool or skill..."*
 - Submit on Enter or clicking the Ask button (appears when input is non-empty).
+- The input is **disabled while streaming is in progress** (same as the Drop page pattern).
 - When a new query is submitted while a completed verdict exists in state: save the current verdict + conversation to history first, then reset state and start fresh.
 
 ### Streaming State
 - While the API response streams, a `StreamingCard` is shown (spinner + live streamed text + pulsing cursor) — same pattern as the Drop page.
-- On error, show retry button within the card.
+- On error (`streamError` set), show retry button within the card.
+- If streaming completes but `onDone` was never called (silent JSON parse failure in the route), treat this as an error and show the retry button. Detect this with a local `verdictReceived` ref: set it to `true` inside `onDone`. After `await stream(...)` resolves, if `verdictReceived.current` is still `false`, set a local error state (`'Could not parse verdict. Try again.'`).
 
 ### VerdictCard
 Replaces `StreamingCard` once streaming completes. Contains:
@@ -42,7 +44,7 @@ Replaces `StreamingCard` once streaming completes. Contains:
 | Section | Content |
 |---------|---------|
 | Top accent line | Color-coded: green (YES), amber (NOT YET), muted (SKIP) |
-| Verdict pill | YES / NOT YET / SKIP — bold, color-matched |
+| Verdict pill | Display text: `YES` / `NOT YET` / `SKIP` (note: `NOT_YET` type renders as `NOT YET` with a space) |
 | Confidence badge | "High confidence" or "Medium confidence" |
 | For you | 1–2 sentence personalised rationale |
 | Case for | Green-tinted panel |
@@ -53,7 +55,10 @@ Replaces `StreamingCard` once streaming completes. Contains:
 - Sits directly below `VerdictCard`, visible after the first verdict is received.
 - Bubble layout: user messages right-aligned (accent-tinted), Drift replies left-aligned with small `∿` avatar.
 - Follow-up input at bottom of thread (placeholder: *"Follow up..."*), submit on Enter or send icon.
-- Each follow-up POSTs to `/api/verdict` with the full accumulated `messages` array.
+- The input is **disabled while streaming is in progress** — submit is not possible until the current response completes.
+- Each follow-up POSTs to `/api/verdict` with `query` set to the **original question** (unused by the route when `messages` is present, but required by the type) and the full accumulated `messages` array.
+- The `messages` array at the point of a follow-up must contain the complete prior exchange, starting with `{ role: 'user', content: originalQuery }` as the first entry, followed by all assistant and user turns in order.
+- Append the **raw streamed text** (the string returned by `stream()`, not the parsed JSON object) as the `assistant` role message when building the thread. The `stream()` return value is the safe way to capture this — do not use the `text` state from the hook (it resets on the next call). This gives the LLM readable natural-language context on follow-ups rather than a JSON blob.
 - Drift reply appended to the thread on stream completion.
 
 ---
@@ -64,7 +69,7 @@ Replaces `StreamingCard` once streaming completes. Contains:
 - Each entry is a `StoredVerdict` (see Types section).
 - **Collapsed state:** verdict pill + truncated query text + expand chevron + trash icon.
 - **Expanded state:** full verdict card breakdown (same sections as VerdictCard) + message count + date + trash icon.
-- Trash icon always visible (collapsed and expanded). On click: remove from localStorage and local state with `AnimatePresence` exit animation.
+- Trash icon always visible (collapsed and expanded). On click: remove from localStorage and local state with `AnimatePresence` exit animation. Use `item.id` as both the React list key and the deletion identifier.
 - Empty state when no history: *"No verdicts yet. Ask Drift something."*
 
 ---
@@ -86,11 +91,23 @@ Add `StoredVerdict` to `src/types/verdict.ts`:
 ```ts
 export interface StoredVerdict extends Verdict {
   messages: { role: 'user' | 'assistant'; content: string }[]
-  askedAt: string // ISO date string, set client-side at persist time
+  // inherits createdAt from Verdict — used as the display date in History tab
 }
 ```
 
-The existing `Verdict` interface already has all required verdict fields (`verdict`, `confidence`, `for_you`, `case_for`, `case_against`, `alternative?`, `query`, `createdAt`).
+The existing `Verdict` interface has `verdict`, `confidence`, `for_you`, `case_for`, `case_against`, `alternative?`, `query`, `id`, and `createdAt`. The LLM prompt (`verdictSystemPrompt`) only returns `verdict`, `confidence`, `for_you`, `case_for`, `case_against`, and `alternative` — it does **not** return `id`, `query`, or `createdAt`. All three must be injected client-side on receipt:
+
+```ts
+const stored: StoredVerdict = {
+  ...verdictFromApi,
+  id: crypto.randomUUID(),
+  query: originalQuery,
+  createdAt: new Date().toISOString(),
+  messages: accumulatedMessages,
+}
+```
+
+`createdAt` is the timestamp displayed in the History tab's "date" field. No separate `askedAt` field is needed.
 
 ---
 
@@ -119,13 +136,17 @@ The route already handles conversation threading via the optional `messages` arr
 // Before
 if (parsed.done && parsed.assessment) {
   options?.onDone?.(parsed.assessment)
+  continue  // keep this
+}
 
 // After
 if (parsed.done && (parsed.assessment ?? parsed.verdict)) {
   options?.onDone?.(parsed.assessment ?? parsed.verdict)
+  continue  // keep this
+}
 ```
 
-This is backwards-compatible — the Drop page (`parsed.assessment`) is unaffected.
+The `continue` must be preserved — it prevents the chunk from also being processed as text. This is backwards-compatible — the Drop page (`parsed.assessment`) is unaffected.
 
 ---
 
@@ -147,6 +168,8 @@ All components (`StreamingCard`, `VerdictCard`, `ConversationThread`, `AskTab`, 
 // Key: 'drift_ask_history'
 // Value: StoredVerdict[] (max 50, newest first)
 ```
+
+All `localStorage` reads and writes are wrapped in `try/catch` and silently swallow errors (storage unavailable, quota exceeded, parse failure) — same pattern as the Drop page. On parse failure, return an empty array.
 
 ---
 
