@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 
 interface StreamOptions {
-  onDone?: (data: unknown) => void
+  onDone?: (data: unknown, accumulated: string) => void
 }
 
 export function useStreaming() {
@@ -49,7 +49,7 @@ export function useStreaming() {
               break
             }
             if (parsed.done && (parsed.assessment ?? parsed.verdict)) {
-              options?.onDone?.(parsed.assessment ?? parsed.verdict)
+              options?.onDone?.(parsed.assessment ?? parsed.verdict, accumulated)
               continue
             }
             if (parsed.text) {

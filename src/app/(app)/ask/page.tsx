@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, ArrowRight, Send, ChevronDown, ChevronUp, Trash2, RefreshCw } from 'lucide-react'
 import { useProfile } from '@/hooks/use-profile'
@@ -115,12 +115,13 @@ function AskPageContent() {
         ))}
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'ask' ? (
+      {/* Tab content — always mounted to preserve state when switching tabs */}
+      <div className={activeTab === 'ask' ? undefined : 'hidden'}>
         <AskTab onSaveToHistory={persistToHistory} />
-      ) : (
+      </div>
+      <div className={activeTab === 'history' ? undefined : 'hidden'}>
         <HistoryTab history={history} onRemove={removeFromHistory} />
-      )}
+      </div>
     </div>
   )
 }
@@ -135,20 +136,20 @@ function StreamingCard({ text, error, onRetry }: {
   return (
     <DriftCard className="relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent animate-pulse" />
-      <div className="px-5 pt-5 pb-4 space-y-3">
+      <div className="px-6 pt-6 pb-5 space-y-4">
         <div className="flex items-center gap-2.5">
           {error ? (
-            <span className="text-label text-red-400">Failed to get verdict</span>
+            <span className="text-body-sm text-red-400">Failed to get verdict</span>
           ) : (
             <>
               <div className="w-4 h-4 rounded-full border border-drift-accent/30 border-t-drift-accent animate-spin" />
-              <span className="text-label text-drift-text-tertiary">Thinking...</span>
+              <span className="text-body-sm text-drift-text-tertiary">Thinking...</span>
             </>
           )}
         </div>
         {error ? (
-          <div className="space-y-2">
-            <p className="text-body-sm text-drift-text-secondary">{error}</p>
+          <div className="space-y-3">
+            <p className="text-body text-drift-text-secondary">{error}</p>
             <button
               onClick={onRetry}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm bg-drift-accent/10 text-drift-accent border border-drift-accent/20 hover:bg-drift-accent/15 transition-all duration-200"
@@ -158,7 +159,7 @@ function StreamingCard({ text, error, onRetry }: {
             </button>
           </div>
         ) : text ? (
-          <p className="text-body-sm text-drift-text-secondary leading-relaxed">
+          <p className="text-body text-drift-text-secondary leading-relaxed">
             {text}
             <span className="inline-block w-0.5 h-3.5 bg-drift-accent ml-0.5 animate-pulse align-middle" />
           </p>
@@ -176,19 +177,19 @@ function VerdictCard({ verdict }: { verdict: Verdict }) {
   return (
     <DriftCard className="relative overflow-hidden">
       <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.accent)} />
-      <div className="px-5 pt-5 pb-4 space-y-4">
+      <div className="px-6 pt-6 pb-5 space-y-5">
         {/* Query label */}
-        <p className="text-label text-drift-text-tertiary">{verdict.query}</p>
+        <p className="text-body-sm text-drift-text-tertiary">{verdict.query}</p>
 
         {/* Verdict pill + confidence */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <span className={cn(
-            'inline-flex items-center px-3.5 py-1.5 rounded-full text-body-sm font-bold border',
+            'inline-flex items-center px-4 py-2 rounded-full text-body font-bold border',
             config.pillClass
           )}>
             {config.label}
           </span>
-          <span className="text-label text-drift-text-tertiary">
+          <span className="text-body-sm text-drift-text-tertiary">
             {verdict.confidence} confidence
           </span>
         </div>
@@ -197,22 +198,22 @@ function VerdictCard({ verdict }: { verdict: Verdict }) {
         <p className="text-body text-drift-text-primary leading-relaxed">{verdict.for_you}</p>
 
         {/* Case for / case against */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-drift-accent/[0.05] border border-drift-accent/[0.10] rounded-xl p-3 space-y-1.5">
-            <p className="text-label text-drift-accent/70 uppercase tracking-wide">Case for</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-drift-accent/[0.05] border border-drift-accent/[0.10] rounded-xl p-4 space-y-2">
+            <p className="text-body-sm text-drift-accent/70 uppercase tracking-wide font-medium">Case for</p>
             <p className="text-body-sm text-drift-text-secondary leading-relaxed">{verdict.case_for}</p>
           </div>
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-3 space-y-1.5">
-            <p className="text-label text-drift-text-tertiary uppercase tracking-wide">Case against</p>
+          <div className="bg-red-500/[0.05] border border-red-500/[0.15] rounded-xl p-4 space-y-2">
+            <p className="text-body-sm text-red-400/70 uppercase tracking-wide font-medium">Case against</p>
             <p className="text-body-sm text-drift-text-tertiary leading-relaxed">{verdict.case_against}</p>
           </div>
         </div>
 
         {/* Alternative — only when present */}
         {verdict.alternative && (
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3">
-            <p className="text-label text-drift-text-tertiary uppercase tracking-wide mb-1">Alternative</p>
-            <p className="text-body-sm text-drift-text-secondary">{verdict.alternative}</p>
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-5 py-4">
+            <p className="text-body-sm text-drift-text-tertiary uppercase tracking-wide font-medium mb-2">Alternative</p>
+            <p className="text-body text-drift-text-secondary">{verdict.alternative}</p>
           </div>
         )}
       </div>
@@ -248,7 +249,7 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Thread messages */}
       <AnimatePresence initial={false}>
         {threadMessages.map((msg, i) => (
@@ -257,15 +258,15 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start gap-2.5')}
+            className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start gap-3')}
           >
             {msg.role === 'assistant' && (
-              <div className="w-6 h-6 rounded-full bg-drift-accent/10 border border-drift-accent/25 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-drift-accent text-[10px]">∿</span>
+              <div className="w-7 h-7 rounded-full bg-drift-accent/10 border border-drift-accent/25 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-drift-accent text-[11px]">∿</span>
               </div>
             )}
             <div className={cn(
-              'max-w-[82%] rounded-2xl px-4 py-2.5 text-body-sm leading-relaxed',
+              'max-w-[82%] rounded-2xl px-5 py-3 text-body leading-relaxed',
               msg.role === 'user'
                 ? 'bg-drift-accent/10 border border-drift-accent/20 text-drift-text-primary rounded-br-sm'
                 : 'bg-white/[0.04] border border-white/[0.07] text-drift-text-secondary rounded-bl-sm'
@@ -278,11 +279,11 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
 
       {/* Live streaming reply in thread */}
       {isStreaming && streamText && threadMessages.length >= 0 && (
-        <div className="flex justify-start gap-2.5">
-          <div className="w-6 h-6 rounded-full bg-drift-accent/10 border border-drift-accent/25 flex items-center justify-center shrink-0 mt-0.5">
-            <span className="text-drift-accent text-[10px]">∿</span>
+        <div className="flex justify-start gap-3">
+          <div className="w-7 h-7 rounded-full bg-drift-accent/10 border border-drift-accent/25 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-drift-accent text-[11px]">∿</span>
           </div>
-          <div className="max-w-[82%] bg-white/[0.04] border border-white/[0.07] rounded-2xl rounded-bl-sm px-4 py-2.5 text-body-sm text-drift-text-secondary leading-relaxed">
+          <div className="max-w-[82%] bg-white/[0.04] border border-white/[0.07] rounded-2xl rounded-bl-sm px-5 py-3 text-body text-drift-text-secondary leading-relaxed">
             {streamText}
             <span className="inline-block w-0.5 h-3.5 bg-drift-accent ml-0.5 animate-pulse align-middle" />
           </div>
@@ -291,7 +292,7 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
 
       {/* Follow-up input */}
       <div className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-xl bg-drift-surface border border-white/[0.08]',
+        'flex items-center gap-3 px-5 py-3.5 rounded-xl bg-drift-surface border border-white/[0.08]',
         isStreaming && 'opacity-60 pointer-events-none'
       )}>
         <input
@@ -300,7 +301,7 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
           onKeyDown={handleKeyDown}
           placeholder="Follow up..."
           disabled={isStreaming}
-          className="flex-1 bg-transparent text-body-sm text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
+          className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
         />
         <button
           onClick={handleSend}
@@ -327,21 +328,14 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
   const [parseError, setParseError] = useState<string | null>(null)
 
   const verdictReceived = useRef(false)
-  const accumulatedRef = useRef('')
 
-  // Keep accumulatedRef in sync with streamed text (safe to read inside onDone closure)
-  useEffect(() => {
-    accumulatedRef.current = streamText
-  }, [streamText])
-
-  const triggerQuery = useCallback(async (query: string, threadMessages: Message[]) => {
+  const triggerQuery = useCallback(async (query: string, threadMessages: Message[], isFollowUp = false) => {
     if (!profile) return
     verdictReceived.current = false
-    accumulatedRef.current = ''
     setParseError(null)
     reset()
 
-    await stream(
+    const finalText = await stream(
       () => fetch('/api/verdict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -351,8 +345,8 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
           messages: threadMessages.length > 0 ? threadMessages : undefined,
         }),
       }),
-      {
-        onDone: (data) => {
+      isFollowUp ? undefined : {
+        onDone: (data, accumulated) => {
           verdictReceived.current = true
           const raw = data as Omit<Verdict, 'id' | 'query' | 'createdAt'>
           const verdict: Verdict = {
@@ -363,7 +357,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
           }
           setCurrentVerdict(verdict)
 
-          const assistantMessage: Message = { role: 'assistant', content: accumulatedRef.current }
+          const assistantMessage: Message = { role: 'assistant', content: accumulated }
           const newMessages: Message[] = [...threadMessages, assistantMessage]
           setMessages(newMessages)
 
@@ -373,7 +367,10 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
       }
     )
 
-    if (!verdictReceived.current) {
+    if (isFollowUp) {
+      const assistantMessage: Message = { role: 'assistant', content: finalText }
+      setMessages(prev => [...prev, assistantMessage])
+    } else if (!verdictReceived.current) {
       setParseError('Could not parse verdict. Try again.')
     }
   }, [profile, stream, reset, onSaveToHistory])
@@ -397,7 +394,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
     if (e.key === 'Enter') handleAsk()
   }
 
-  const showStreamingCard = isStreaming || parseError || (!!streamError && !currentVerdict)
+  const showStreamingCard = !currentVerdict && (isStreaming || parseError || !!streamError)
 
   return (
     <div className="space-y-4">
@@ -477,7 +474,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
               onFollowUp={(followUp) => {
                 const newMessages: Message[] = [...messages, { role: 'user', content: followUp }]
                 setMessages(newMessages)
-                triggerQuery(originalQuery, newMessages)
+                triggerQuery(originalQuery, newMessages, true)
               }}
             />
           </motion.div>
@@ -519,16 +516,16 @@ function HistoryVerdictCard({ item, onRemove }: {
 
       {/* Collapsed header — always visible */}
       <div
-        className="px-5 pt-4 pb-3 flex items-center gap-2.5 cursor-pointer"
+        className="px-6 pt-5 pb-4 flex items-center gap-3 cursor-pointer"
         onClick={() => setExpanded(p => !p)}
       >
         <span className={cn(
-          'inline-flex items-center px-2.5 py-1 rounded-full text-label font-bold border shrink-0',
+          'inline-flex items-center px-3 py-1.5 rounded-full text-body-sm font-bold border shrink-0',
           config.pillClass
         )}>
           {config.label}
         </span>
-        <p className="flex-1 text-body-sm text-drift-text-secondary truncate">{truncatedQuery}</p>
+        <p className="flex-1 text-body text-drift-text-secondary truncate">{truncatedQuery}</p>
         {expanded
           ? <ChevronUp className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
           : <ChevronDown className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
@@ -552,33 +549,33 @@ function HistoryVerdictCard({ item, onRemove }: {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-4 space-y-3 border-t border-white/[0.05] pt-3">
+            <div className="px-6 pb-5 space-y-4 border-t border-white/[0.05] pt-4">
               {/* Meta */}
-              <p className="text-label text-drift-text-tertiary">
+              <p className="text-body-sm text-drift-text-tertiary">
                 {date} · {followUpCount > 0
                   ? `${followUpCount} follow-up${followUpCount !== 1 ? 's' : ''}`
                   : 'No follow-ups'}
               </p>
 
               {/* For you */}
-              <p className="text-body-sm text-drift-text-primary leading-relaxed">{item.for_you}</p>
+              <p className="text-body text-drift-text-primary leading-relaxed">{item.for_you}</p>
 
               {/* Case for / against */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="bg-drift-accent/[0.05] border border-drift-accent/[0.10] rounded-xl p-3 space-y-1">
-                  <p className="text-label text-drift-accent/70 uppercase tracking-wide">Case for</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-drift-accent/[0.05] border border-drift-accent/[0.10] rounded-xl p-4 space-y-2">
+                  <p className="text-body-sm text-drift-accent/70 uppercase tracking-wide font-medium">Case for</p>
                   <p className="text-body-sm text-drift-text-secondary leading-relaxed">{item.case_for}</p>
                 </div>
-                <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-3 space-y-1">
-                  <p className="text-label text-drift-text-tertiary uppercase tracking-wide">Case against</p>
+                <div className="bg-red-500/[0.05] border border-red-500/[0.15] rounded-xl p-4 space-y-2">
+                  <p className="text-body-sm text-red-400/70 uppercase tracking-wide font-medium">Case against</p>
                   <p className="text-body-sm text-drift-text-tertiary leading-relaxed">{item.case_against}</p>
                 </div>
               </div>
 
               {item.alternative && (
-                <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3">
-                  <p className="text-label text-drift-text-tertiary uppercase tracking-wide mb-1">Alternative</p>
-                  <p className="text-body-sm text-drift-text-secondary">{item.alternative}</p>
+                <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-5 py-4">
+                  <p className="text-body-sm text-drift-text-tertiary uppercase tracking-wide font-medium mb-2">Alternative</p>
+                  <p className="text-body text-drift-text-secondary">{item.alternative}</p>
                 </div>
               )}
             </div>

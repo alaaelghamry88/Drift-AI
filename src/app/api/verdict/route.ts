@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { groq, MODEL } from '@/lib/claude'
-import { verdictSystemPrompt } from '@/lib/prompts'
+import { verdictSystemPrompt, followUpSystemPrompt } from '@/lib/prompts'
 import type { DriftProfile } from '@/types/profile'
 
 export async function POST(req: NextRequest) {
@@ -11,12 +11,13 @@ export async function POST(req: NextRequest) {
   }
 
   const messages = prevMessages || [{ role: 'user' as const, content: query }]
+  const isFollowUp = messages.length > 1
 
   const stream = await groq.chat.completions.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: isFollowUp ? 512 : 2048,
     messages: [
-      { role: 'system', content: verdictSystemPrompt(profile) },
+      { role: 'system', content: isFollowUp ? followUpSystemPrompt(profile) : verdictSystemPrompt(profile) },
       ...messages,
     ],
     stream: true,
@@ -37,16 +38,18 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        try {
-          const jsonMatch = buffer.match(/```json\n?([\s\S]*?)\n?```/) ||
-                            buffer.match(/(\{[\s\S]*\})/)
-          if (jsonMatch) {
-            const verdict = JSON.parse(jsonMatch[1] || jsonMatch[0])
-            const doneData = JSON.stringify({ done: true, verdict })
-            controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+        if (!isFollowUp) {
+          try {
+            const jsonMatch = buffer.match(/```json\n?([\s\S]*?)\n?```/) ||
+                              buffer.match(/(\{[\s\S]*\})/)
+            if (jsonMatch) {
+              const verdict = JSON.parse(jsonMatch[1] || jsonMatch[0])
+              const doneData = JSON.stringify({ done: true, verdict })
+              controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+            }
+          } catch {
+            // couldn't parse verdict JSON
           }
-        } catch {
-          // couldn't parse verdict JSON
         }
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
