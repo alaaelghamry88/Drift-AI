@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const response = await groq.chat.completions.create({
       model: MODEL,
-      max_tokens: 8096,
+      max_tokens: 2048,
       messages: [
         { role: 'system', content: digestSystemPrompt(profile) },
         { role: 'user', content: digestUserPrompt(profile, articles) }

@@ -49,7 +49,7 @@ Return ONLY the JSON array, no other text.`
 export function digestUserPrompt(profile: DriftProfile, articles: TavilyResult[]): string {
   if (articles.length > 0) {
     const articleList = articles
-      .map((a, i) => `[${i + 1}] ${a.title} | ${a.url} | ${a.content}`)
+      .map((a, i) => `[${i + 1}] ${a.title} | ${a.url} | ${a.content.slice(0, 300)}`)
       .join('\n')
 
     return `Generate today's digest for a ${profile.role} working on: "${profile.currentContext}".
@@ -58,7 +58,14 @@ Select 5–7 items from the articles provided below. Only use articles from this
 
 Prioritise items most relevant to their stack: ${profile.stack.join(', ')}.
 
-Classify each item with the most accurate card_type — if it's about a new tool or version bump use "tool_release", if it links to a GitHub repo use "repo", if it's a tutorial or explainer article use "article". Aim for variety across card types.
+Classify each item with the most accurate card_type:
+- URL contains "youtube.com" → use "video"
+- URL contains "producthunt.com" → use "tool_release"
+- URL contains "github.com" → use "repo"
+- New tool or version announcement → use "tool_release"
+- Tutorial or explainer → use "article"
+
+Aim for variety — include at least 1 video and 1 tool_release if those sources are present.
 
 ARTICLES:
 ${articleList}

@@ -18,6 +18,8 @@ export function buildSearchQueries(profile: DriftProfile): string[] {
     'AI tools and LLM news this week',
     `AI ${profile.stack.join(' ')} ${year}`,
     `AI ${profile.currentContext.slice(0, 60)} ${year}`,
+    `AI ${profile.stack[0]} tutorial site:youtube.com`,
+    'new AI tools for developers site:producthunt.com',
   ]
 }
 
@@ -58,6 +60,7 @@ async function searchTavily(query: string): Promise<TavilyResult[]> {
         search_depth: 'basic',
         max_results: 7,
         topic: 'news',
+        days: 14,
       }),
       signal: controller.signal,
     })
@@ -85,5 +88,5 @@ export async function fetchAINews(profile: DriftProfile): Promise<TavilyResult[]
     .flatMap(r => r.value)
   const unique = deduplicateByUrl(all)
   const sorted = sortByRecency(unique)
-  return sorted.slice(0, 15)
+  return sorted.slice(0, 20)
 }
