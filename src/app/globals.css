@@ -263,40 +263,78 @@
 }
 
 /* ─────────────────────────────────────────
+   Onboarding Atmosphere Animations
+───────────────────────────────────────── */
+
+/* Bioluminescent particles — rise from the sea floor */
+@keyframes drift-float-up {
+  0%   { transform: translateY(0)       translateX(0);                   opacity: 0; }
+  8%   {                                                                  opacity: 1; }
+  40%  { transform: translateY(-40vh)  translateX(var(--p-sway,  10px)); }
+  72%  { transform: translateY(-72vh)  translateX(calc(var(--p-sway,  10px) * -0.5)); opacity: 0.7; }
+  100% { transform: translateY(-110vh) translateX(var(--p-sway,  10px)); opacity: 0; }
+}
+
+/* Horizon wave — seamless horizontal scroll */
+@keyframes drift-wave-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Wordmark wave glyph — soft glow breathe */
+@keyframes drift-glow-breathe {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(77, 217, 192, 0.4)); }
+  50%       { filter: drop-shadow(0 0 16px rgba(77, 217, 192, 0.75)); }
+}
+
+/* ─────────────────────────────────────────
    Background Atmosphere
 ───────────────────────────────────────── */
 
 .drift-bg {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(77, 217, 192, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(13, 47, 63, 0.8) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(10, 37, 53, 0.9) 0%, transparent 60%),
-    #0A2535;
+  background: #0A2535;
   min-height: 100vh;
   position: relative;
 }
 
+/* Primary orb — teal bioluminescence, drifts slowly */
 .drift-bg::before {
   content: '';
   position: fixed;
-  inset: 0;
-  background: radial-gradient(
-    ellipse 80% 60% at 50% 0%,
-    rgba(77, 217, 192, 0.05) 0%,
-    transparent 70%
-  );
-  animation: drift-ambient 18s ease-in-out infinite;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 55% 45% at 28% 58%, rgba(77, 217, 192, 0.13) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 72% 22%, rgba(77, 217, 192, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(10, 37, 53, 0.95) 0%, transparent 55%);
+  animation: drift-orb-primary 22s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
 
-@keyframes drift-ambient {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 0.9;
-  }
+/* Secondary orb — deep ocean layer, counter-drift */
+.drift-bg::after {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 45% 55% at 80% 70%, rgba(13, 47, 63, 0.6) 0%, transparent 60%),
+    radial-gradient(ellipse 35% 30% at 15% 20%, rgba(77, 217, 192, 0.04) 0%, transparent 50%);
+  animation: drift-orb-secondary 30s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes drift-orb-primary {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  25%       { transform: translate(4%, -3%) scale(1.04); }
+  50%       { transform: translate(-2%, 5%) scale(0.97); }
+  75%       { transform: translate(3%, 2%) scale(1.02); }
+}
+
+@keyframes drift-orb-secondary {
+  0%, 100% { transform: translate(0%, 0%); }
+  33%       { transform: translate(-5%, 3%); }
+  66%       { transform: translate(3%, -4%); }
 }
 
 /* ─────────────────────────────────────────
@@ -307,13 +345,34 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    font-family: var(--font-body);
+    /* hide scrollbar but allow scroll */
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
   body {
     @apply bg-drift-base text-drift-text-primary;
     font-family: var(--font-body);
   }
-  html {
-    font-family: var(--font-body);
+
+  /* Grain texture overlay — subtle film grain for depth */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    opacity: 0.038;
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: screen;
   }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }

@@ -2,11 +2,10 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useProfile } from '@/hooks/use-profile'
-import { DigestScreen } from '@/components/digest/digest-screen'
 import { BottomNav } from '@/components/ui/bottom-nav'
+import { useProfile } from '@/hooks/use-profile'
 
-export default function HomePage() {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, isLoaded } = useProfile()
   const router = useRouter()
 
@@ -27,7 +26,7 @@ export default function HomePage() {
   return (
     <div className="drift-bg min-h-screen">
       <div className="relative z-10 mx-auto max-w-[680px] px-4 md:px-6 py-6 pb-28">
-        <DigestScreen profile={profile} />
+        {children}
       </div>
       <BottomNav />
     </div>
