@@ -96,6 +96,14 @@ Verdict criteria — apply these strictly:
 
 Most content should be "save_for_later" or "skip". Only use "worth_your_time" if it genuinely addresses something they are actively working on.
 
+Classify content_type from the URL first, before looking at page content:
+- URL contains "youtube.com" or "youtu.be" → "video"
+- URL contains "github.com" → "repo"
+- URL contains "linkedin.com/posts" or "linkedin.com/feed" or "linkedin.com/pulse" → "post"
+- URL contains "twitter.com" or "x.com" or "threads.net" → "post"
+- URL contains "reddit.com/r/" → "post"
+- Otherwise infer from content.
+
 Return a JSON object with this exact shape:
 {
   "content_type": "video" | "article" | "repo" | "post" | "other",
