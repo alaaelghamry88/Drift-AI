@@ -48,16 +48,32 @@ export default function ContextPage() {
             'w-full px-4 py-4 rounded-xl resize-none',
             'bg-drift-surface border border-white/10',
             'text-body text-drift-text-primary placeholder:text-drift-text-tertiary',
-            'outline-none focus:border-drift-accent/40 transition-colors',
+            'outline-none focus:border-drift-accent/40 focus:shadow-[0_0_0_1px_rgba(77,217,192,0.15),0_0_20px_rgba(77,217,192,0.06)]',
+            'transition-all duration-300',
             'leading-relaxed'
           )}
         />
-        <p className="text-body-sm text-drift-text-tertiary">
-          {context.length < 20
-            ? `${20 - context.length} more characters to continue`
-            : `${context.length} characters`
-          }
-        </p>
+
+        {/* Animated progress bar */}
+        <div className="space-y-1.5">
+          <div className="h-0.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-drift-accent-muted to-drift-accent"
+              animate={{ width: `${Math.min((context.length / 20) * 100, 100)}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
+          </div>
+          <motion.p
+            className="text-body-sm"
+            animate={{ color: canContinue ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)' }}
+            transition={{ duration: 0.3 }}
+          >
+            {context.length < 20
+              ? `${20 - context.length} more characters to continue`
+              : `${context.length} characters · good to go`
+            }
+          </motion.p>
+        </div>
       </div>
 
       {/* Examples */}
@@ -65,19 +81,23 @@ export default function ContextPage() {
         <p className="text-label text-drift-text-tertiary">Examples</p>
         <div className="space-y-2">
           {CONTEXT_EXAMPLES.map((example, i) => (
-            <button
+            <motion.button
               key={i}
               onClick={() => setContext(example)}
+              whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.04)' }}
+              whileTap={{ scale: 0.99 }}
+              transition={{ duration: 0.15 }}
               className={cn(
                 'w-full text-left px-4 py-3 rounded-xl',
                 'bg-white/[0.03] border border-white/[0.06]',
                 'text-body-sm text-drift-text-secondary',
-                'hover:border-white/10 hover:bg-white/[0.05] hover:text-drift-text-primary',
-                'transition-all duration-200'
+                'hover:border-white/[0.10] hover:text-drift-text-primary',
+                'transition-colors duration-200 group'
               )}
             >
+              <span className="text-drift-accent opacity-40 group-hover:opacity-70 transition-opacity mr-2 text-[10px]">→</span>
               {example}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
