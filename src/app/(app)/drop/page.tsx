@@ -79,6 +79,19 @@ function DropPageContent() {
 
   const triggerAssessment = useCallback(async (url: string) => {
     if (!profile) return
+
+    // Use cached result if URL was already assessed
+    const cached = history.find(item => item.url === url)
+    if (cached) {
+      setHistory(prev => {
+        const next = [cached, ...prev.filter(item => item.url !== url)]
+        saveHistory(next)
+        return next
+      })
+      setInputValue('')
+      return
+    }
+
     setPendingUrl(url)
     reset()
 
@@ -105,7 +118,7 @@ function DropPageContent() {
 
     // If streaming finished but onDone never fired (no JSON found), clear pending
     if (result !== undefined) setPendingUrl(null)
-  }, [profile, stream, reset])
+  }, [profile, history, stream, reset])
 
   // Auto-trigger from ?url= param
   useEffect(() => {
