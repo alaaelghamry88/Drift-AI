@@ -48,8 +48,8 @@ export function useStreaming() {
               streamDone = true
               break
             }
-            if (parsed.done && parsed.assessment) {
-              options?.onDone?.(parsed.assessment)
+            if (parsed.done && (parsed.assessment ?? parsed.verdict)) {
+              options?.onDone?.(parsed.assessment ?? parsed.verdict)
               continue
             }
             if (parsed.text) {
