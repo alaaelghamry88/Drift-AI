@@ -1,4 +1,5 @@
 import type { DriftProfile } from '@/types/profile'
+import type { TavilyResult } from '@/lib/tavily'
 
 export function buildProfileContext(profile: DriftProfile): string {
   return `
@@ -10,7 +11,22 @@ USER DRIFT PROFILE:
 `.trim()
 }
 
-export function digestSystemPrompt(profile: DriftProfile): string {
+export function digestSystemPrompt(profile: DriftProfile, hasArticles = false): string {
+  const cardTypes = hasArticles
+    ? '"tool_release" | "article"'
+    : '"tool_release" | "article" | "video" | "repo" | "skill"'
+
+  const metadataSection = hasArticles
+    ? `Metadata fields by card_type:
+- tool_release: { type: "tool_release", tool_name, version_from?, version_to?, impact: "high"|"medium"|"low", source }
+- article: { type: "article", read_time_minutes, source, author?, key_takeaway }`
+    : `Metadata fields by card_type:
+- tool_release: { type: "tool_release", tool_name, version_from?, version_to?, impact: "high"|"medium"|"low", source }
+- article: { type: "article", read_time_minutes, source, author?, key_takeaway }
+- video: { type: "video", platform, channel, duration_minutes?, topic_tags, key_timestamps? }
+- repo: { type: "repo", github_url, stars?, language?, use_case }
+- skill: { type: "skill", why_now, learning_path? }`
+
   return `You are Drift — a calm, intelligent AI assistant for developers navigating the AI era.
 
 Your job is to curate a daily digest of maximum 5–7 items that are genuinely relevant to this specific developer.
@@ -22,7 +38,7 @@ You are opinionated and direct. You filter ruthlessly — surface only what actu
 When generating the digest, return a valid JSON array of card objects. Each card must have this shape:
 {
   "id": "unique string",
-  "card_type": "tool_release" | "article" | "video" | "repo" | "skill",
+  "card_type": ${cardTypes},
   "title": "string",
   "summary": "2-3 sentence summary",
   "relevance_score": number (1-10),
@@ -31,17 +47,29 @@ When generating the digest, return a valid JSON array of card objects. Each card
   "metadata": { ...type-specific fields }
 }
 
-Metadata fields by card_type:
-- tool_release: { type: "tool_release", tool_name, version_from?, version_to?, impact: "high"|"medium"|"low", source }
-- article: { type: "article", read_time_minutes, source, author?, key_takeaway }
-- video: { type: "video", platform, channel, duration_minutes?, topic_tags, key_timestamps? }
-- repo: { type: "repo", github_url, stars?, language?, use_case }
-- skill: { type: "skill", why_now, learning_path? }
+${metadataSection}
 
 Return ONLY the JSON array, no other text.`
 }
 
-export function digestUserPrompt(profile: DriftProfile): string {
+export function digestUserPrompt(profile: DriftProfile, articles: TavilyResult[]): string {
+  if (articles.length > 0) {
+    const articleList = articles
+      .map((a, i) => `[${i + 1}] ${a.title} | ${a.url} | ${a.content}`)
+      .join('\n')
+
+    return `Generate today's digest for a ${profile.role} working on: "${profile.currentContext}".
+
+Select 5–7 items from the articles provided below. Only use articles from this list — do not invent titles or URLs not present here. Set source_url to the article's URL.
+
+Prioritise items most relevant to their stack: ${profile.stack.join(', ')}.
+
+ARTICLES:
+${articleList}
+
+Return 5–7 items as a JSON array.`
+  }
+
   return `Generate today's digest for a ${profile.role} working on: "${profile.currentContext}".
 
 Use web search to find current AI/developer news, tool releases, and relevant content from the last 7 days.
