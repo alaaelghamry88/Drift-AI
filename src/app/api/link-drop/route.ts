@@ -1,17 +1,35 @@
 import { NextRequest } from 'next/server'
 import { groq, MODEL } from '@/lib/claude'
 import { linkAssessmentSystemPrompt } from '@/lib/prompts'
+import { stripHtml } from '@/lib/html-strip'
 import type { DriftProfile } from '@/types/profile'
+
+async function fetchPageContent(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return '(Content could not be retrieved.)'
+    const html = await res.text()
+    const text = stripHtml(html)
+    return text.length > 0 ? text : '(Content could not be retrieved.)'
+  } catch {
+    return '(Content could not be retrieved.)'
+  }
+}
 
 export async function POST(req: NextRequest) {
   const { profile, url } = await req.json() as { profile: DriftProfile; url: string }
+
+  const content = await fetchPageContent(url)
+  const userMessage = content === '(Content could not be retrieved.)'
+    ? `Assess this URL for me: ${url}\n\n(Content could not be retrieved.)`
+    : `Assess this URL for me: ${url}\n\nCONTENT:\n${content}`
 
   const stream = await groq.chat.completions.create({
     model: MODEL,
     max_tokens: 2048,
     messages: [
       { role: 'system', content: linkAssessmentSystemPrompt(profile) },
-      { role: 'user', content: `Assess this URL for me: ${url}` }
+      { role: 'user', content: userMessage }
     ],
     stream: true,
   })
