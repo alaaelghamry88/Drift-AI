@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Sparkles, Link2, User } from 'lucide-react'
+import { Home, Sparkles, Link2, User, NotebookPen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { icon: Home,      label: 'Feed',   href: '/' },
-  { icon: Link2,     label: 'Drop',    href: '/drop' },
-  { icon: Sparkles,  label: 'Ask',     href: '/ask' },
-  { icon: User,      label: 'Profile', href: '/profile' },
+  { icon: Home,        label: 'Feed',  href: '/' },
+  { icon: Link2,       label: 'Drop',  href: '/drop' },
+  { icon: NotebookPen, label: 'Dump',  href: '/dump' },
+  { icon: Sparkles,    label: 'Ask',   href: '/ask' },
+  { icon: User,        label: 'Me',    href: '/profile' },
 ]
 
 export function BottomNav() {
@@ -22,7 +23,7 @@ export function BottomNav() {
       {/* Top fade shadow */}
       <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-drift-base/40 to-transparent pointer-events-none" />
 
-      <div className="relative mx-auto max-w-lg flex items-center justify-around px-6 pt-2 pb-3">
+      <div className="relative mx-auto max-w-lg flex items-center justify-around px-2 pt-2 pb-3">
         {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
           const isActive = pathname === href
           return (
@@ -30,7 +31,7 @@ export function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-1 px-5 py-2 rounded-2xl',
+                'flex flex-col items-center gap-1 px-3 py-2 rounded-2xl',
                 'transition-all duration-300',
                 isActive
                   ? [
