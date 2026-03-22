@@ -64,6 +64,8 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   other: 'Link',
 }
 
+type FilterType = 'all' | 'video' | 'article' | 'repo' | 'post' | 'other'
+
 function DropPageContent() {
   const { profile } = useProfile()
   const searchParams = useSearchParams()
@@ -73,6 +75,7 @@ function DropPageContent() {
   const [inputError, setInputError] = useState('')
   const [history, setHistory] = useState<StoredLinkAssessment[]>(() => loadHistory())
   const [pendingUrl, setPendingUrl] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
 
   const { text: streamText, isStreaming, error: streamError, stream, reset } = useStreaming()
   const hasTriggered = useRef(false)
@@ -110,6 +113,7 @@ function DropPageContent() {
             saveHistory(next)
             return next
           })
+          setActiveFilter(prev => (prev !== 'all' && prev !== assessment.content_type ? 'all' : prev))
           setPendingUrl(null)
           setInputValue('')
         },
@@ -163,6 +167,12 @@ function DropPageContent() {
     })
   }
 
+  const filteredHistory = activeFilter === 'all'
+    ? history
+    : history.filter(item => item.content_type === activeFilter)
+
+  const presentTypes = Array.from(new Set(history.map(item => item.content_type))) as FilterType[]
+
   return (
     <div className="space-y-5">
       {/* Page header */}
@@ -213,6 +223,15 @@ function DropPageContent() {
         )}
       </motion.div>
 
+      {/* Filter pills */}
+      {history.length > 0 && (
+        <FilterPills
+          types={presentTypes}
+          active={activeFilter}
+          onChange={setActiveFilter}
+        />
+      )}
+
       {/* Streaming card */}
       <AnimatePresence>
         {(isStreaming || streamError) && pendingUrl && (
@@ -234,7 +253,7 @@ function DropPageContent() {
 
       {/* History list */}
       <AnimatePresence mode="popLayout">
-        {history.map((item, i) => (
+        {filteredHistory.map((item, i) => (
           <motion.div
             key={item.assessedAt}
             initial={{ opacity: 0, y: 16 }}
@@ -247,16 +266,51 @@ function DropPageContent() {
       </AnimatePresence>
 
       {/* Empty state */}
-      {!isStreaming && !streamError && history.length === 0 && (
+      {!isStreaming && !streamError && filteredHistory.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center py-16"
         >
-          <p className="text-body text-drift-text-secondary mb-1">No links dropped yet.</p>
-          <p className="text-body-sm text-drift-text-tertiary">Paste any URL above to assess it.</p>
+          {history.length === 0 ? (
+            <>
+              <p className="text-body text-drift-text-secondary mb-1">No links dropped yet.</p>
+              <p className="text-body-sm text-drift-text-tertiary">Paste any URL above to assess it.</p>
+            </>
+          ) : (
+            <p className="text-body text-drift-text-secondary mb-1">
+              No {CONTENT_TYPE_LABELS[activeFilter] ?? activeFilter} links yet.
+            </p>
+          )}
         </motion.div>
       )}
+    </div>
+  )
+}
+
+function FilterPills({ types, active, onChange }: {
+  types: FilterType[]
+  active: FilterType
+  onChange: (f: FilterType) => void
+}) {
+  const pills: FilterType[] = ['all', ...types]
+
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-none">
+      {pills.map(type => (
+        <button
+          key={type}
+          onClick={() => onChange(type)}
+          className={cn(
+            'shrink-0 px-3 py-1.5 rounded-lg text-label border transition-all duration-200',
+            active === type
+              ? 'bg-drift-accent/15 text-drift-accent border-drift-accent/30'
+              : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
+          )}
+        >
+          {type === 'all' ? 'All' : (CONTENT_TYPE_LABELS[type] ?? type)}
+        </button>
+      ))}
     </div>
   )
 }

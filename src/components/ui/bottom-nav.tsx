@@ -6,9 +6,9 @@ import { Home, Sparkles, Link2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { icon: Home,      label: 'Today',   href: '/' },
-  { icon: Sparkles,  label: 'Ask',     href: '/ask' },
+  { icon: Home,      label: 'Feed',   href: '/' },
   { icon: Link2,     label: 'Drop',    href: '/drop' },
+  { icon: Sparkles,  label: 'Ask',     href: '/ask' },
   { icon: User,      label: 'Profile', href: '/profile' },
 ]
 
