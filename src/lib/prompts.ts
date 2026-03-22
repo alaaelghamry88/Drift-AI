@@ -11,16 +11,10 @@ USER DRIFT PROFILE:
 `.trim()
 }
 
-export function digestSystemPrompt(profile: DriftProfile, hasArticles = false): string {
-  const cardTypes = hasArticles
-    ? '"tool_release" | "article"'
-    : '"tool_release" | "article" | "video" | "repo" | "skill"'
+export function digestSystemPrompt(profile: DriftProfile): string {
+  const cardTypes = '"tool_release" | "article" | "video" | "repo" | "skill"'
 
-  const metadataSection = hasArticles
-    ? `Metadata fields by card_type:
-- tool_release: { type: "tool_release", tool_name, version_from?, version_to?, impact: "high"|"medium"|"low", source }
-- article: { type: "article", read_time_minutes, source, author?, key_takeaway }`
-    : `Metadata fields by card_type:
+  const metadataSection = `Metadata fields by card_type:
 - tool_release: { type: "tool_release", tool_name, version_from?, version_to?, impact: "high"|"medium"|"low", source }
 - article: { type: "article", read_time_minutes, source, author?, key_takeaway }
 - video: { type: "video", platform, channel, duration_minutes?, topic_tags, key_timestamps? }
@@ -63,6 +57,8 @@ export function digestUserPrompt(profile: DriftProfile, articles: TavilyResult[]
 Select 5–7 items from the articles provided below. Only use articles from this list — do not invent titles or URLs not present here. Set source_url to the article's URL.
 
 Prioritise items most relevant to their stack: ${profile.stack.join(', ')}.
+
+Classify each item with the most accurate card_type — if it's about a new tool or version bump use "tool_release", if it links to a GitHub repo use "repo", if it's a tutorial or explainer article use "article". Aim for variety across card types.
 
 ARTICLES:
 ${articleList}

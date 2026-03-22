@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       model: MODEL,
       max_tokens: 8096,
       messages: [
-        { role: 'system', content: digestSystemPrompt(profile, hasArticles) },
+        { role: 'system', content: digestSystemPrompt(profile) },
         { role: 'user', content: digestUserPrompt(profile, articles) }
       ],
     })

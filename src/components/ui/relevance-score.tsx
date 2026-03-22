@@ -5,37 +5,32 @@ interface RelevanceScoreProps {
 }
 
 export function RelevanceScore({ score }: RelevanceScoreProps) {
-  const isHigh   = score >= 8
-  const isMid    = score >= 5
+  const isTopPick     = score >= 9
+  const isStrongMatch = score >= 7
+  const isRelevant    = score >= 5
 
-  const ringColor = isHigh
-    ? 'border-drift-gold/40'
-    : isMid
-    ? 'border-drift-accent/30'
-    : 'border-white/10'
+  const label = isTopPick
+    ? 'Top pick'
+    : isStrongMatch
+    ? 'Strong signal'
+    : isRelevant
+    ? 'Relevant'
+    : 'FYI'
 
-  const textColor = isHigh
-    ? 'text-drift-gold'
-    : isMid
-    ? 'text-drift-accent'
-    : 'text-drift-muted'
-
-  const glow = isHigh
-    ? 'shadow-[0_0_14px_rgba(232,201,122,0.25),inset_0_0_8px_rgba(232,201,122,0.06)]'
-    : isMid
-    ? 'shadow-[0_0_10px_rgba(77,217,192,0.18),inset_0_0_6px_rgba(77,217,192,0.04)]'
-    : ''
+  const styles = isTopPick
+    ? 'text-amber-400 border-amber-400/30 bg-amber-400/[0.08]'
+    : isStrongMatch
+    ? 'text-drift-accent border-drift-accent/25 bg-drift-accent/[0.08]'
+    : isRelevant
+    ? 'text-sky-400/80 border-sky-400/20 bg-sky-400/[0.06]'
+    : 'text-drift-muted border-white/[0.08] bg-white/[0.03]'
 
   return (
-    <div className={cn(
-      'font-mono text-mono-lg font-medium tabular-nums',
-      'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-      'border bg-white/[0.04]',
-      ringColor,
-      textColor,
-      glow,
+    <span className={cn(
+      'inline-flex items-center px-2.5 py-1 rounded-lg text-label border shrink-0',
+      styles
     )}>
-      {score}
-    </div>
+      {label}
+    </span>
   )
 }
