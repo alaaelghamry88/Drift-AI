@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { groq, MODEL } from '@/lib/claude'
 import { digestSystemPrompt, digestUserPrompt } from '@/lib/prompts'
+import { fetchAINews } from '@/lib/tavily'
 import type { DriftProfile } from '@/types/profile'
 import type { DigestCard } from '@/types/digest'
 
@@ -12,12 +13,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profile required' }, { status: 400 })
     }
 
+    const articles = await fetchAINews(profile)
+    const hasArticles = articles.length > 0
+
+    if (!hasArticles) {
+      console.warn('Tavily returned no results — falling back to LLM-only digest')
+    }
+
     const response = await groq.chat.completions.create({
       model: MODEL,
       max_tokens: 8096,
       messages: [
-        { role: 'system', content: digestSystemPrompt(profile) },
-        { role: 'user', content: digestUserPrompt(profile) }
+        { role: 'system', content: digestSystemPrompt(profile, hasArticles) },
+        { role: 'user', content: digestUserPrompt(profile, articles) }
       ],
     })
 
