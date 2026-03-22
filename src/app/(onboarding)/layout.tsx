@@ -99,7 +99,7 @@ export default function OnboardingLayout({
       </div>
 
       {/* ── Drift wordmark ── */}
-      <div className="relative z-10 mb-10 flex flex-col items-center gap-2 select-none">
+      <div className="relative z-10 mb-16 flex flex-col items-center gap-2 select-none">
         <div className="flex items-baseline gap-2">
           <span
             className="text-drift-accent"
@@ -119,7 +119,7 @@ export default function OnboardingLayout({
             className="text-drift-text-primary"
             style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.04em' }}
           >
-            drift
+            Drift
           </span>
         </div>
         <p

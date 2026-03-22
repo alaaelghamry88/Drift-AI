@@ -13,7 +13,6 @@ import { RelevanceScore } from '@/components/ui/relevance-score'
 import { DoneState } from '@/components/digest/done-state'
 import { useStreaming } from '@/hooks/use-streaming'
 import { cn } from '@/lib/utils'
-import { LinkDropInput } from '@/components/ui/link-drop'
 import type { StoredLinkAssessment } from '@/types/verdict'
 
 interface DigestScreenProps {
@@ -378,7 +377,7 @@ export function DigestScreen({ profile }: DigestScreenProps) {
 
       {/* Header */}
       {!isDone && (
-        <div className="mb-2">
+        <div className="mb-8">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-label text-drift-text-tertiary tracking-[0.10em] mb-2">{today}</p>
@@ -401,8 +400,6 @@ export function DigestScreen({ profile }: DigestScreenProps) {
           <div className="mt-5 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
         </div>
       )}
-
-      <LinkDropInput profile={profile} />
 
       {/* Saved Links */}
       {savedLinks.length > 0 && (

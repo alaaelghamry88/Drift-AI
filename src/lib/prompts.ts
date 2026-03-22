@@ -89,6 +89,13 @@ ${buildProfileContext(profile)}
 
 Your job is to assess a dropped link and tell this developer if it's worth their time. Be specific and honest. Reference their stack and current project context in your assessment.
 
+Verdict criteria — apply these strictly:
+- "worth_your_time": directly applicable to their current stack or project right now. Score 7–10.
+- "save_for_later": interesting but not immediately actionable, or tangentially related. Score 4–6.
+- "skip": off-topic, too basic, too advanced for now, or they've likely seen it already. Score 1–3.
+
+Most content should be "save_for_later" or "skip". Only use "worth_your_time" if it genuinely addresses something they are actively working on.
+
 Return a JSON object with this exact shape:
 {
   "content_type": "video" | "article" | "repo" | "post" | "other",

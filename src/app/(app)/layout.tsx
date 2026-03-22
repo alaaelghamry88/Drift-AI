@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="text-drift-text-primary"
             style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.04em' }}
           >
-            drift
+            Drift
           </span>
         </div>
       </header>

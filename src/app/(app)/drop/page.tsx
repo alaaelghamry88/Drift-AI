@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, ArrowRight, ExternalLink, Bookmark, RefreshCw } from 'lucide-react'
+import { Link2, ArrowRight, ExternalLink, Bookmark, RefreshCw, Trash2 } from 'lucide-react'
 import { useProfile } from '@/hooks/use-profile'
 import { useStreaming } from '@/hooks/use-streaming'
 import { DriftCard } from '@/components/ui/drift-card'
@@ -142,10 +142,18 @@ function DropPageContent() {
     })
   }
 
+  const handleRemove = (assessedAt: string) => {
+    setHistory(prev => {
+      const next = prev.filter(item => item.assessedAt !== assessedAt)
+      saveHistory(next)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-5">
       {/* Page header */}
-      <div className="mb-2">
+      <div className="mb-8">
         <h1 className="text-h1 text-drift-text-primary leading-none">Link Drop</h1>
         <p className="text-body-sm text-drift-text-tertiary mt-2">
           Paste any URL — Drift will read it and tell you if it&apos;s worth your time.
@@ -220,7 +228,7 @@ function DropPageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <VerdictCard item={item} onToggleSave={handleToggleSave} />
+            <VerdictCard item={item} onToggleSave={handleToggleSave} onRemove={handleRemove} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -285,9 +293,10 @@ function StreamingCard({ url, text, error, onRetry }: {
   )
 }
 
-function VerdictCard({ item, onToggleSave }: {
+function VerdictCard({ item, onToggleSave, onRemove }: {
   item: StoredLinkAssessment
   onToggleSave: (url: string) => void
+  onRemove: (assessedAt: string) => void
 }) {
   const [saved, setSaved] = useState(item.save_to_digest)
   const config = VERDICT_CONFIG[item.verdict] ?? VERDICT_CONFIG.skip
@@ -357,6 +366,14 @@ function VerdictCard({ item, onToggleSave }: {
             <ExternalLink className="w-3.5 h-3.5" />
             Open
           </a>
+          <div className="flex-1" />
+          <button
+            onClick={() => onRemove(item.assessedAt)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
+            title="Remove"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </DriftCard>
