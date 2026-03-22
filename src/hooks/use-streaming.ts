@@ -9,10 +9,11 @@ export function useStreaming() {
 
   const stream = useCallback(async (
     fetchFn: () => Promise<Response>
-  ) => {
+  ): Promise<string> => {
     setText('')
     setError(null)
     setIsStreaming(true)
+    let accumulated = ''
 
     try {
       const response = await fetchFn()
@@ -34,6 +35,7 @@ export function useStreaming() {
             try {
               const parsed = JSON.parse(data)
               if (parsed.text) {
+                accumulated += parsed.text
                 setText(prev => prev + parsed.text)
               }
             } catch {
@@ -47,6 +49,7 @@ export function useStreaming() {
     } finally {
       setIsStreaming(false)
     }
+    return accumulated
   }, [])
 
   const reset = useCallback(() => {

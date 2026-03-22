@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Bookmark, Eye, ChevronDown, ExternalLink,
+  Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
   Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
@@ -86,35 +86,44 @@ function DigestCardItem({
   profile,
   action,
   isExpanded,
+  cachedDeeperText,
   onAction,
+  onUndo,
   onToggleExpand,
+  onDeeperLoaded,
 }: {
   card: DigestCard
   profile: DriftProfile
   action?: CardAction
   isExpanded: boolean
+  cachedDeeperText?: string
   onAction: (id: string, action: CardAction) => void
+  onUndo: (id: string) => void
   onToggleExpand: (id: string) => void
+  onDeeperLoaded: (id: string, text: string) => void
 }) {
   const config = CARD_TYPE_CONFIG[card.card_type] ?? CARD_TYPE_CONFIG.article
   const Icon = config.icon
-  const { text: deeperText, isStreaming, stream, reset } = useStreaming()
+  const { text: streamedText, isStreaming, stream } = useStreaming()
+
+  const deeperText = cachedDeeperText ?? streamedText
 
   const handleGoDeeper = useCallback(async () => {
     if (isExpanded) {
       onToggleExpand(card.id)
-      reset()
       return
     }
     onToggleExpand(card.id)
-    await stream(() =>
+    if (cachedDeeperText) return
+    const result = await stream(() =>
       fetch('/api/deeper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile, card }),
       })
     )
-  }, [isExpanded, card, profile, onToggleExpand, stream, reset])
+    if (result) onDeeperLoaded(card.id, result)
+  }, [isExpanded, card, profile, cachedDeeperText, onToggleExpand, stream, onDeeperLoaded])
 
   const isSaved = action === 'save'
   const isRead = action === 'read'
@@ -125,7 +134,7 @@ function DigestCardItem({
       exit={{ opacity: 0, x: isRead ? -40 : 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <DriftCard glowing={isSaved} className={cn(isRead && 'opacity-40 pointer-events-none', 'relative overflow-hidden')}>
+      <DriftCard glowing={isSaved} className={cn(isRead && 'opacity-50', 'relative overflow-hidden')}>
 
         {/* Top type-colour accent line */}
         <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.topAccent)} />
@@ -196,51 +205,64 @@ function DigestCardItem({
 
           {/* Action row */}
           <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
-            <button
-              onClick={() => onAction(card.id, 'save')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
-                isSaved
-                  ? 'bg-drift-accent/15 text-drift-accent border-drift-accent/30 shadow-[0_0_10px_rgba(77,217,192,0.08)]'
-                  : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
-              )}
-            >
-              <Bookmark className={cn('w-3.5 h-3.5', isSaved && 'fill-current')} />
-              {isSaved ? 'Saved' : 'Save'}
-            </button>
-
-            <button
-              onClick={handleGoDeeper}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
-                isExpanded
-                  ? 'bg-drift-accent/12 text-drift-accent border-drift-accent/25'
-                  : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
-              )}
-            >
-              <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', isExpanded && 'rotate-180')} />
-              Deeper
-            </button>
-
-            <div className="flex-1" />
-
-            {card.source_url && (
-              <a
-                href={card.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
+            <div className={cn('flex items-center gap-2 flex-1', isRead && 'pointer-events-none')}>
+              <button
+                onClick={() => onAction(card.id, 'save')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
+                  isSaved
+                    ? 'bg-drift-accent/15 text-drift-accent border-drift-accent/30 shadow-[0_0_10px_rgba(77,217,192,0.08)]'
+                    : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
+                )}
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
+                <Bookmark className={cn('w-3.5 h-3.5', isSaved && 'fill-current')} />
+                {isSaved ? 'Saved' : 'Save'}
+              </button>
 
-            <button
-              onClick={() => onAction(card.id, 'read')}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 transition-all duration-200"
-            >
-              <Eye className="w-3.5 h-3.5" />
-            </button>
+              <button
+                onClick={handleGoDeeper}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
+                  isExpanded
+                    ? 'bg-drift-accent/12 text-drift-accent border-drift-accent/25'
+                    : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
+                )}
+              >
+                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', isExpanded && 'rotate-180')} />
+                Deeper
+              </button>
+
+              <div className="flex-1" />
+
+              {card.source_url && (
+                <a
+                  href={card.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+
+            {isRead ? (
+              <button
+                onClick={() => onUndo(card.id)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
+                title="Undo"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => onAction(card.id, 'read')}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 transition-all duration-200"
+                title="Mark as read"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
         </div>
@@ -249,11 +271,29 @@ function DigestCardItem({
   )
 }
 
+const CACHE_KEY = 'drift_digest_cache'
+const DEEPER_CACHE_KEY = 'drift_deeper_cache'
+
 export function DigestScreen({ profile }: DigestScreenProps) {
-  const [cards, setCards] = useState<DigestCard[]>([])
+  const [cards, setCards] = useState<DigestCard[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      return cached ? (JSON.parse(cached) as DigestCard[]) : []
+    } catch {
+      return []
+    }
+  })
   const [actions, setActions] = useState<Record<string, CardAction>>({})
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
-  const [isLoading, setIsLoading] = useState(true)
+  const [deeperCache, setDeeperCache] = useState<Record<string, string>>(() => {
+    try {
+      const cached = sessionStorage.getItem(DEEPER_CACHE_KEY)
+      return cached ? (JSON.parse(cached) as Record<string, string>) : {}
+    } catch {
+      return {}
+    }
+  })
+  const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
 
   const isDone = cards.length > 0 && cards.every(c => {
@@ -275,7 +315,9 @@ export function DigestScreen({ profile }: DigestScreenProps) {
       })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json() as { cards: DigestCard[] }
-      setCards(data.cards ?? [])
+      const fetched = data.cards ?? []
+      setCards(fetched)
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(fetched)) } catch { /* ignore */ }
     } catch {
       setLoadError(true)
     } finally {
@@ -283,12 +325,20 @@ export function DigestScreen({ profile }: DigestScreenProps) {
     }
   }, [profile])
 
-  useEffect(() => {
-    fetchDigest()
-  }, [fetchDigest])
-
   const handleAction = useCallback((id: string, action: CardAction) => {
     setActions(prev => ({ ...prev, [id]: action }))
+  }, [])
+
+  const handleUndo = useCallback((id: string) => {
+    setActions(prev => { const next = { ...prev }; delete next[id]; return next })
+  }, [])
+
+  const handleDeeperLoaded = useCallback((id: string, text: string) => {
+    setDeeperCache(prev => {
+      const next = { ...prev, [id]: text }
+      try { sessionStorage.setItem(DEEPER_CACHE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
   }, [])
 
   const handleToggleExpand = useCallback((id: string) => {
@@ -320,7 +370,7 @@ export function DigestScreen({ profile }: DigestScreenProps) {
                 {profile.stack.slice(0, 3).join(' · ')}
               </p>
             </div>
-            {!isLoading && cards.length > 0 && (
+            {!isLoading && (
               <button
                 onClick={fetchDigest}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary transition-all duration-200 mt-1"
@@ -390,8 +440,11 @@ export function DigestScreen({ profile }: DigestScreenProps) {
                   profile={profile}
                   action={actions[card.id]}
                   isExpanded={expandedCards.has(card.id)}
+                  cachedDeeperText={deeperCache[card.id]}
                   onAction={handleAction}
+                  onUndo={handleUndo}
                   onToggleExpand={handleToggleExpand}
+                  onDeeperLoaded={handleDeeperLoaded}
                 />
               </motion.div>
             ))}
@@ -407,16 +460,17 @@ export function DigestScreen({ profile }: DigestScreenProps) {
           className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-transparent backdrop-blur-2xl p-8 text-center"
         >
           <p className="text-body text-drift-text-secondary mb-2">
-            No digest items generated.
+            Ready to load your digest
           </p>
           <p className="text-body-sm text-drift-text-tertiary mb-4">
-            Make sure your ANTHROPIC_API_KEY is set correctly.
+            Click below to fetch today&apos;s personalized feed.
           </p>
           <button
             onClick={fetchDigest}
-            className="px-4 py-2 rounded-xl text-body-sm bg-drift-accent/10 text-drift-accent border border-drift-accent/20 hover:bg-drift-accent/15 transition-all duration-200"
+            className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl text-body-sm bg-drift-accent/10 text-drift-accent border border-drift-accent/20 hover:bg-drift-accent/15 transition-all duration-200"
           >
-            Try again
+            <RefreshCw className="w-3.5 h-3.5" />
+            Load digest
           </button>
         </motion.div>
       )}

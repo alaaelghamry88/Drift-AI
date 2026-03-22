@@ -25,7 +25,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="drift-bg min-h-screen">
-      <div className="relative z-10 mx-auto max-w-[680px] px-4 md:px-6 py-6 pb-28">
+      <header className="relative z-10 mx-auto max-w-[680px] px-4 md:px-6 pt-6 pb-4">
+        <div className="flex items-baseline justify-center gap-2 select-none">
+          <span
+            className="text-drift-accent"
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: '1.25rem',
+              lineHeight: 1,
+              animationName: 'drift-glow-breathe',
+              animationDuration: '3.5s',
+              animationTimingFunction: 'ease-in-out',
+              animationIterationCount: 'infinite',
+            }}
+          >
+            ∿
+          </span>
+          <span
+            className="text-drift-text-primary"
+            style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.04em' }}
+          >
+            drift
+          </span>
+        </div>
+      </header>
+      <div className="relative z-10 mx-auto max-w-[680px] px-4 md:px-6 pb-28">
         {children}
       </div>
       <BottomNav />
