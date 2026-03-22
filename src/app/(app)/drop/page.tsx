@@ -353,9 +353,6 @@ function VerdictCard({ item, onToggleSave, onRemove }: {
           {config.label}
         </div>
 
-        {/* Verdict reason */}
-        <p className="text-body-sm text-drift-text-secondary leading-relaxed">{item.verdict_reason}</p>
-
         {/* Actions */}
         <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
           <button
