@@ -90,7 +90,7 @@ All processing happens server-side via a Next.js API route on save:
 | Metadata fetch | OG tags scraped: title, description, image, site name, content type detection |
 | One-liner summary | Claude generates a single sentence describing what the link is and why it matters |
 | Auto-tagging | Claude suggests 1–3 tags based on content. User can confirm, edit, or ignore. |
-| Relevance scoring | Claude scores each active link against the current context string (0–10) when context changes or on first load. Scores cached in memory for the session — not persisted. Used for ranking only, not shown to user. |
+| Relevance scoring | A single Claude call scores all active links at once against the current context string. The prompt sends the full list of link titles + summaries and returns a JSON array of `{ id, score }` pairs (0–10). Runs when context changes or on first load. Scores cached in memory for the session — not persisted. Used for ranking only, not shown to user. |
 
 Content type is detected from URL + OG metadata:
 - `video` — YouTube, Vimeo, Loom
