@@ -82,7 +82,7 @@ export function AddSheet({ canvasWidth, canvasHeight, onAdd, onClose }: AddSheet
   return (
     <>
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[55]"
         onClick={onClose}
         aria-hidden
       />
@@ -92,7 +92,7 @@ export function AddSheet({ canvasWidth, canvasHeight, onAdd, onClose }: AddSheet
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
-        className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[340px] max-w-[calc(100vw-32px)] z-50 bg-[#12131e] border border-[#22243a] rounded-2xl overflow-hidden shadow-2xl"
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[340px] max-w-[calc(100vw-32px)] z-[60] bg-[#12131e] border border-[#22243a] rounded-2xl overflow-hidden shadow-2xl"
       >
         <div className="px-4 py-3 border-b border-[#1a1c2e]">
           <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#555]">{steps}</p>

@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { icon: Home,        label: 'Feed',  href: '/' },
   { icon: Link2,       label: 'Drop',  href: '/drop' },
-  { icon: NotebookPen, label: 'Dump',  href: '/dump' },
   { icon: Sparkles,    label: 'Ask',   href: '/ask' },
+  { icon: NotebookPen, label: 'Dump',  href: '/dump' },
   { icon: User,        label: 'Me',    href: '/profile' },
 ]
 

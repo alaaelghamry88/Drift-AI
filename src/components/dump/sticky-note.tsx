@@ -18,7 +18,7 @@ interface StickyNoteProps {
 }
 
 const CARD_W = 200
-const CARD_H = 200
+const CARD_H_MIN = 120
 const DRAG_THRESHOLD = 4
 
 export function StickyNote({
@@ -36,7 +36,7 @@ export function StickyNote({
 
   const clamp = useCallback((px: number, py: number) => ({
     x: Math.max(0, Math.min(px, canvasWidth - CARD_W)),
-    y: Math.max(0, Math.min(py, canvasHeight - CARD_H)),
+    y: Math.max(0, Math.min(py, canvasHeight - CARD_H_MIN)),
   }), [canvasWidth, canvasHeight])
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -85,7 +85,7 @@ export function StickyNote({
         left: pos.x,
         top: pos.y,
         width: CARD_W,
-        height: CARD_H,
+        minHeight: CARD_H_MIN,
         transform: `rotate(${rotation}deg)`,
         zIndex: isDragging ? 50 : 'auto',
         background: color,

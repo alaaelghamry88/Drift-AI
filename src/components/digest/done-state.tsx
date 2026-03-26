@@ -27,12 +27,63 @@ function HorizonIllustration({ className }: { className?: string }) {
   )
 }
 
+function AnimatedWave() {
+  return (
+    <div
+      className="fixed pointer-events-none z-[1] overflow-hidden"
+      style={{ bottom: 0, left: 0, right: 0, height: '90px' }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(10,37,53,0.7) 100%)' }}
+      />
+      <div
+        style={{
+          width: '200vw',
+          height: '90px',
+          animationName: 'drift-wave-scroll',
+          animationDuration: '28s',
+          animationTimingFunction: 'linear',
+          animationIterationCount: 'infinite',
+        }}
+      >
+        <svg
+          viewBox="0 0 2880 90"
+          width="100%"
+          height="90"
+          fill="none"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0,55 C240,22 480,88 720,55 C960,22 1200,88 1440,55 C1680,22 1920,88 2160,55 C2400,22 2640,88 2880,55"
+            stroke="rgba(77,217,192,0.18)"
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <path
+            d="M0,65 C240,35 480,95 720,65 C960,35 1200,95 1440,65 C1680,35 1920,95 2160,65 C2400,35 2640,95 2880,65"
+            stroke="rgba(77,217,192,0.07)"
+            strokeWidth="1"
+            fill="none"
+          />
+          <path
+            d="M0,55 C240,22 480,88 720,55 C960,22 1200,88 1440,55 C1680,22 1920,88 2160,55 C2400,22 2640,88 2880,55 L2880,90 L0,90 Z"
+            fill="rgba(10,37,53,0.4)"
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 export function DoneState({ onRefresh }: DoneStateProps) {
   return (
     <motion.div
       {...pageFade}
       className="flex flex-col items-center justify-center py-20 text-center"
     >
+      <AnimatedWave />
       <HorizonIllustration className="mb-12 opacity-60" />
 
       <motion.p
