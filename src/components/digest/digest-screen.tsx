@@ -4,16 +4,16 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
-  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw
+  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
-import type { DigestCard, DigestState, CardAction } from '@/types/digest'
+import type { DigestCard, CardAction } from '@/types/digest'
 import { DriftCard } from '@/components/ui/drift-card'
 import { RelevanceScore } from '@/components/ui/relevance-score'
 import { DoneState } from '@/components/digest/done-state'
 import { useStreaming } from '@/hooks/use-streaming'
+import { addLink, createSavedLink } from '@/lib/saved-links'
 import { cn } from '@/lib/utils'
-import type { StoredLinkAssessment } from '@/types/verdict'
 
 interface DigestScreenProps {
   profile: DriftProfile
@@ -128,6 +128,24 @@ function DigestCardItem({
 
   const isSaved = action === 'save'
   const isRead = action === 'read'
+  const [savedToLinks, setSavedToLinks] = useState(false)
+
+  const handleSaveToLinks = useCallback(() => {
+    if (savedToLinks || !card.source_url) return
+    const link = createSavedLink({
+      url: card.source_url,
+      title: card.title,
+      summary: card.summary,
+      thumbnail: null,
+      favicon: null,
+      siteName: (() => { try { return new URL(card.source_url).hostname } catch { return '' } })(),
+      type: card.card_type === 'video' ? 'video' : card.card_type === 'repo' ? 'repo' : 'article',
+      tags: [],
+      source: 'feed',
+    })
+    addLink(link)
+    setSavedToLinks(true)
+  }, [savedToLinks, card])
 
   return (
     <motion.div
@@ -236,14 +254,28 @@ function DigestCardItem({
               <div className="flex-1" />
 
               {card.source_url && (
-                <a
-                  href={card.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <>
+                  <button
+                    onClick={handleSaveToLinks}
+                    title="Save to Links"
+                    className={cn(
+                      'flex items-center justify-center w-8 h-8 rounded-lg text-body-sm border transition-all duration-200',
+                      savedToLinks
+                        ? 'bg-drift-accent/10 text-drift-accent border-drift-accent/25'
+                        : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
+                    )}
+                  >
+                    <Library className="w-3.5 h-3.5" />
+                  </button>
+                  <a
+                    href={card.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </>
               )}
             </div>
 
@@ -276,42 +308,23 @@ const CACHE_KEY = 'drift_digest_cache'
 const DEEPER_CACHE_KEY = 'drift_deeper_cache'
 
 export function DigestScreen({ profile }: DigestScreenProps) {
-  const [cards, setCards] = useState<DigestCard[]>(() => {
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY)
-      return cached ? (JSON.parse(cached) as DigestCard[]) : []
-    } catch {
-      return []
-    }
-  })
+  const [cards, setCards] = useState<DigestCard[]>([])
   const [actions, setActions] = useState<Record<string, CardAction>>({})
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
-  const [deeperCache, setDeeperCache] = useState<Record<string, string>>(() => {
-    try {
-      const cached = sessionStorage.getItem(DEEPER_CACHE_KEY)
-      return cached ? (JSON.parse(cached) as Record<string, string>) : {}
-    } catch {
-      return {}
-    }
-  })
+  const [deeperCache, setDeeperCache] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
-  const [savedLinks, setSavedLinks] = useState<StoredLinkAssessment[]>([])
-  const [savedLinksOpen, setSavedLinksOpen] = useState(true)
 
+  // Restore from sessionStorage after hydration
   useEffect(() => {
-    const read = () => {
-      try {
-        const raw = localStorage.getItem('drift_drop_history')
-        const all: StoredLinkAssessment[] = raw ? JSON.parse(raw) : []
-        setSavedLinks(all.filter(item => item.save_to_digest))
-      } catch {
-        // localStorage unavailable
-      }
-    }
-    read()
-    window.addEventListener('focus', read)
-    return () => window.removeEventListener('focus', read)
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) setCards(JSON.parse(cached) as DigestCard[])
+    } catch { /* ignore */ }
+    try {
+      const cached = sessionStorage.getItem(DEEPER_CACHE_KEY)
+      if (cached) setDeeperCache(JSON.parse(cached) as Record<string, string>)
+    } catch { /* ignore */ }
   }, [])
 
   const isDone = cards.length > 0 && cards.every(c => {
@@ -398,59 +411,6 @@ export function DigestScreen({ profile }: DigestScreenProps) {
             )}
           </div>
           <div className="mt-5 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
-        </div>
-      )}
-
-      {/* Saved Links */}
-      {savedLinks.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-          <button
-            onClick={() => setSavedLinksOpen(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left"
-          >
-            <span className="text-label text-drift-text-tertiary tracking-[0.08em]">Saved Links</span>
-            <ChevronDown className={cn(
-              'w-4 h-4 text-drift-text-tertiary transition-transform duration-200',
-              savedLinksOpen && 'rotate-180'
-            )} />
-          </button>
-          <AnimatePresence>
-            {savedLinksOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="border-t border-white/[0.06] divide-y divide-white/[0.04]">
-                  {savedLinks.map(item => (
-                    <div key={item.assessedAt} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className="text-body-sm text-drift-text-secondary flex-1 truncate">
-                        {item.title}
-                      </span>
-                      <span className={cn(
-                        'text-label px-2 py-0.5 rounded-md border shrink-0',
-                        item.verdict === 'worth_your_time' && 'text-drift-accent bg-drift-accent/10 border-drift-accent/25',
-                        item.verdict === 'save_for_later' && 'text-amber-400 bg-amber-400/10 border-amber-400/25',
-                        item.verdict === 'skip' && 'text-white/40 bg-white/[0.04] border-white/[0.07]',
-                      )}>
-                        {item.verdict === 'worth_your_time' ? 'Worth it' : item.verdict === 'save_for_later' ? 'Save' : 'Skip'}
-                      </span>
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-drift-text-tertiary hover:text-drift-text-secondary transition-colors shrink-0"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       )}
 

@@ -1,210 +1,206 @@
-// src/app/(app)/drop/page.tsx
 'use client'
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, ArrowRight, ExternalLink, Bookmark, RefreshCw, Trash2 } from 'lucide-react'
-import { useProfile } from '@/hooks/use-profile'
-import { useStreaming } from '@/hooks/use-streaming'
-import { DriftCard } from '@/components/ui/drift-card'
-import { RelevanceScore } from '@/components/ui/relevance-score'
+import { Link2, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { LinkAssessment, StoredLinkAssessment } from '@/types/verdict'
+import { useProfile } from '@/hooks/use-profile'
+import {
+  loadLinks,
+  addLink,
+  updateLinkStatus,
+  removeLink,
+  getActiveLinks,
+  archiveExpiredLinks,
+  createSavedLink,
+} from '@/lib/saved-links'
+import type { SavedLink } from '@/types/saved-link'
+import { ContextBar } from '@/components/links/context-bar'
+import { TagFilter } from '@/components/links/tag-filter'
+import { LinkCard } from '@/components/links/link-card'
 
-const HISTORY_KEY = 'drift_drop_history'
-const MAX_HISTORY = 50
-
-function loadHistory(): StoredLinkAssessment[] {
+async function scoreLinks(
+  context: string,
+  links: SavedLink[]
+): Promise<Map<string, number>> {
+  if (!context || links.length === 0) return new Map()
   try {
-    const raw = localStorage.getItem(HISTORY_KEY)
-    return raw ? (JSON.parse(raw) as StoredLinkAssessment[]) : []
+    const res = await fetch('/api/links/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        context,
+        links: links.map(l => ({ id: l.id, title: l.title, summary: l.summary })),
+      }),
+    })
+    if (!res.ok) return new Map()
+    const data = await res.json() as { id: string; score: number }[]
+    return new Map(data.map(d => [d.id, d.score]))
   } catch {
-    return []
-  }
-}
-
-function saveHistory(items: StoredLinkAssessment[]): void {
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY)))
-  } catch {
-    // localStorage unavailable
+    return new Map()
   }
 }
 
 export default function DropPage() {
-  return <DropPageContent />
-}
-
-const VERDICT_CONFIG = {
-  worth_your_time: {
-    label: 'Worth Your Time',
-    className: 'text-drift-accent bg-drift-accent/10 border-drift-accent/25',
-    accent: 'bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent',
-  },
-  save_for_later: {
-    label: 'Save For Later',
-    className: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
-    accent: 'bg-gradient-to-r from-amber-400/70 via-amber-400/20 to-transparent',
-  },
-  skip: {
-    label: 'Skip',
-    className: 'text-white/40 bg-white/[0.04] border-white/[0.07]',
-    accent: 'bg-gradient-to-r from-white/20 via-white/5 to-transparent',
-  },
-}
-
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  video: 'Video',
-  article: 'Article',
-  repo: 'Repo',
-  post: 'Post',
-  other: 'Link',
-}
-
-type FilterType = 'all' | 'video' | 'article' | 'repo' | 'post' | 'other'
-
-function DropPageContent() {
   const { profile } = useProfile()
-  const searchParams = useSearchParams()
-  const urlParam = searchParams.get('url') ?? ''
+  const [links, setLinks] = useState<SavedLink[]>([])
+  const [scores, setScores] = useState<Map<string, number>>(new Map())
+  const [context, setContext] = useState('')
+  const [activeTypes, setActiveTypes] = useState<string[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [scoringContext, setScoringContext] = useState('')
+  const [urlInput, setUrlInput] = useState('')
+  const [urlError, setUrlError] = useState('')
 
-  const [inputValue, setInputValue] = useState(urlParam)
-  const [inputError, setInputError] = useState('')
-  const [history, setHistory] = useState<StoredLinkAssessment[]>(() => loadHistory())
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null)
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  // Load links and archive expired ones on mount
+  useEffect(() => {
+    archiveExpiredLinks()
+    setLinks(getActiveLinks())
+  }, [])
 
-  const { text: streamText, isStreaming, error: streamError, stream, reset } = useStreaming()
-  const hasTriggered = useRef(false)
-
-  const triggerAssessment = useCallback(async (url: string) => {
-    if (!profile) return
-
-    // Use cached result if URL was already assessed
-    const cached = history.find(item => item.url === url)
-    if (cached) {
-      setHistory(prev => {
-        const next = [cached, ...prev.filter(item => item.url !== url)]
-        saveHistory(next)
-        return next
-      })
-      setInputValue('')
-      return
+  // Initialise context from profile
+  useEffect(() => {
+    if (profile?.currentContext && !context) {
+      setContext(profile.currentContext)
     }
+  }, [profile, context])
 
-    setPendingUrl(url)
-    reset()
+  // Re-score when context meaningfully changes (debounced)
+  useEffect(() => {
+    if (!context || context === scoringContext) return
+    const timer = setTimeout(async () => {
+      const active = getActiveLinks()
+      const map = await scoreLinks(context, active)
+      setScores(map)
+      setScoringContext(context)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [context, scoringContext])
 
-    const result = await stream(
-      () => fetch('/api/link-drop', {
+  const handleSave = useCallback(async (url: string) => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile, url }),
-      }),
-      {
-        onDone: (data) => {
-          const assessment = data as LinkAssessment
-          const stored: StoredLinkAssessment = { ...assessment, url, assessedAt: new Date().toISOString() }
-          setHistory(prev => {
-            const next = [stored, ...prev].slice(0, MAX_HISTORY)
-            saveHistory(next)
-            return next
-          })
-          setActiveFilter(prev => (prev !== 'all' && prev !== assessment.content_type ? 'all' : prev))
-          setPendingUrl(null)
-          setInputValue('')
-        },
+        body: JSON.stringify({ url }),
+      })
+      const meta = res.ok ? await res.json() : {}
+      const link = createSavedLink({
+        url,
+        title: meta.title ?? url,
+        summary: meta.summary ?? '',
+        thumbnail: meta.thumbnail ?? null,
+        favicon: meta.favicon ?? null,
+        siteName: meta.siteName ?? new URL(url).hostname,
+        type: meta.type ?? 'other',
+        tags: meta.tags ?? [],
+        source: 'manual',
+      })
+      addLink(link)
+      setLinks(getActiveLinks())
+      // Score the new link immediately
+      if (context) {
+        const map = await scoreLinks(context, getActiveLinks())
+        setScores(map)
+        setScoringContext(context)
       }
-    )
-
-    // If streaming finished but onDone never fired (no JSON found), clear pending
-    if (result !== undefined) setPendingUrl(null)
-  }, [profile, history, stream, reset])
-
-  // Auto-trigger from ?url= param
-  useEffect(() => {
-    if (urlParam && !hasTriggered.current) {
-      hasTriggered.current = true
-      triggerAssessment(urlParam)
+    } finally {
+      setIsSaving(false)
     }
-  }, [urlParam, triggerAssessment])
+  }, [context])
 
-  const handleSubmit = () => {
-    const trimmed = inputValue.trim()
-    if (!trimmed) return
-    try {
-      new URL(trimmed)
-    } catch {
-      setInputError('Please enter a valid URL (e.g. https://example.com)')
+  const handleSubmit = useCallback(() => {
+    const trimmed = urlInput.trim()
+    if (!trimmed || isSaving) return
+    try { new URL(trimmed) } catch {
+      setUrlError('Enter a valid URL (e.g. https://example.com)')
       return
     }
-    setInputError('')
-    triggerAssessment(trimmed)
+    setUrlError('')
+    setUrlInput('')
+    handleSave(trimmed)
+  }, [urlInput, isSaving, handleSave])
+
+  const handleStatus = useCallback((id: string, status: SavedLink['status']) => {
+    updateLinkStatus(id, status)
+    setLinks(getActiveLinks())
+  }, [])
+
+  const handleRemove = useCallback((id: string) => {
+    removeLink(id)
+    setLinks(getActiveLinks())
+  }, [])
+
+  // All unique types from active links
+  const allTypes = useMemo(
+    () => Array.from(new Set(links.map(l => l.type))),
+    [links]
+  )
+
+  const toggleType = (type: string) => {
+    setActiveTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    )
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSubmit()
-  }
+  const filtered = useMemo(() => {
+    if (activeTypes.length === 0) return links
+    return links.filter(l => activeTypes.includes(l.type))
+  }, [links, activeTypes])
 
-  const handleToggleSave = (url: string) => {
-    setHistory(prev => {
-      const next = prev.map(item =>
-        item.url === url ? { ...item, save_to_digest: !item.save_to_digest } : item
-      )
-      saveHistory(next)
-      return next
-    })
-  }
+  const relevant = filtered.filter(l => (scores.get(l.id) ?? 0) >= 6)
+  const other = filtered.filter(l => (scores.get(l.id) ?? 0) < 6)
 
-  const handleRemove = (assessedAt: string) => {
-    setHistory(prev => {
-      const next = prev.filter(item => item.assessedAt !== assessedAt)
-      saveHistory(next)
-      return next
-    })
-  }
+  // Links expiring within 24h (active, not kept)
+  const expiringIds = useMemo(() => {
+    const threshold = Date.now() + 24 * 60 * 60 * 1000
+    return new Set(
+      links
+        .filter(l => l.status === 'active' && new Date(l.expiresAt).getTime() < threshold)
+        .map(l => l.id)
+    )
+  }, [links])
 
-  const filteredHistory = activeFilter === 'all'
-    ? history
-    : history.filter(item => item.content_type === activeFilter)
-
-  const presentTypes = Array.from(new Set(history.map(item => item.content_type))) as FilterType[]
+  const hasScores = scores.size > 0
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-h1 text-drift-text-primary leading-none">Link Drop</h1>
-        <p className="text-body-sm text-drift-text-tertiary mt-2">
-          Paste any URL — Drift will read it and tell you if it&apos;s worth your time.
+      <div className="mb-6">
+        <h1 className="text-h1 text-drift-text-primary leading-none">Drop</h1>
+        <p className="text-body-sm text-drift-text-tertiary mt-1.5">
+          Your personal link library.
         </p>
-        <div className="mt-5 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
+        <div className="mt-4 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
       </div>
 
-      {/* Input bar */}
+      {/* Context bar */}
+      <ContextBar value={context} onChange={setContext} />
+
+      {/* URL input */}
       <motion.div
         animate={{
-          boxShadow: isStreaming
+          boxShadow: isSaving
             ? '0 0 0 1px rgba(77,217,192,0.4), 0 0 24px rgba(77,217,192,0.10)'
-            : '0 0 0 1px rgba(255,255,255,0.06)'
+            : '0 0 0 1px rgba(255,255,255,0.06)',
         }}
         transition={{ duration: 0.2 }}
-        className="rounded-2xl bg-drift-surface backdrop-blur-xl overflow-hidden"
+        className="rounded-2xl bg-[#111827] overflow-hidden"
       >
-        <div className={cn('flex items-center gap-3 px-4 py-3.5', isStreaming && 'opacity-60 pointer-events-none')}>
+        <div className={cn('flex items-center gap-3 px-4 py-3.5', isSaving && 'opacity-60 pointer-events-none')}>
           <Link2 className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
           <input
-            value={inputValue}
-            onChange={e => { setInputValue(e.target.value); setInputError('') }}
-            onKeyDown={handleKeyDown}
-            placeholder="Paste a URL to assess..."
+            value={urlInput}
+            onChange={e => { setUrlInput(e.target.value); setUrlError('') }}
+            onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
+            placeholder="Paste a URL to save..."
             className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
           />
           <AnimatePresence>
-            {inputValue.trim() && (
+            {urlInput.trim() && !isSaving && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -212,234 +208,117 @@ function DropPageContent() {
                 onClick={handleSubmit}
                 className="flex items-center gap-1.5 text-label text-drift-accent px-3 py-1.5 rounded-lg bg-drift-accent/10 hover:bg-drift-accent/20 transition-colors duration-200 shrink-0"
               >
-                Assess
+                Save
                 <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
               </motion.button>
             )}
           </AnimatePresence>
         </div>
-        {inputError && (
-          <p className="px-4 pb-3 text-label text-red-400">{inputError}</p>
+        {urlError && (
+          <p className="px-4 pb-3 text-label text-red-400">{urlError}</p>
         )}
       </motion.div>
 
-      {/* Filter pills */}
-      {history.length > 0 && (
-        <FilterPills
-          types={presentTypes}
-          active={activeFilter}
-          onChange={setActiveFilter}
+      {/* Type filter */}
+      {allTypes.length > 1 && (
+        <TagFilter
+          tags={allTypes}
+          active={activeTypes}
+          onToggle={toggleType}
+          onClear={() => setActiveTypes([])}
         />
       )}
 
-      {/* Streaming card */}
+      {/* Expiry nudge */}
+      {expiringIds.size > 0 && (
+        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
+          <span className="text-label text-amber-400">
+            {expiringIds.size === 1
+              ? '1 link expires within 24 hours'
+              : `${expiringIds.size} links expire within 24 hours`}
+            {' — '}bookmark to keep them.
+          </span>
+        </div>
+      )}
+
+      {/* Skeleton while saving */}
       <AnimatePresence>
-        {(isStreaming || streamError) && pendingUrl && (
+        {isSaving && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="flex gap-3 items-center p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]"
           >
-            <StreamingCard
-              url={pendingUrl}
-              text={streamText}
-              error={streamError}
-              onRetry={() => triggerAssessment(pendingUrl)}
-            />
+            <div className="w-[60px] h-[44px] rounded-lg bg-white/[0.06] shrink-0 animate-pulse" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 rounded bg-white/[0.06] w-3/4 animate-pulse" />
+              <div className="h-2.5 rounded bg-white/[0.04] w-full animate-pulse" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* History list */}
-      <AnimatePresence mode="popLayout">
-        {filteredHistory.map((item, i) => (
-          <motion.div
-            key={item.assessedAt}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <VerdictCard item={item} onToggleSave={handleToggleSave} onRemove={handleRemove} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {/* Empty state */}
-      {!isStreaming && !streamError && filteredHistory.length === 0 && (
+      {/* Link sections */}
+      {filtered.length === 0 && !isSaving ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center py-16"
         >
-          {history.length === 0 ? (
+          {links.length === 0 ? (
             <>
-              <p className="text-body text-drift-text-secondary mb-1">No links dropped yet.</p>
-              <p className="text-body-sm text-drift-text-tertiary">Paste any URL above to assess it.</p>
+              <p className="text-body text-drift-text-secondary mb-1">No links saved yet.</p>
+              <p className="text-body-sm text-drift-text-tertiary">
+                Tap + to save your first link.
+              </p>
             </>
           ) : (
-            <p className="text-body text-drift-text-secondary mb-1">
-              No {CONTENT_TYPE_LABELS[activeFilter] ?? activeFilter} links yet.
-            </p>
+            <p className="text-body text-drift-text-secondary">No links match these filters.</p>
           )}
         </motion.div>
+      ) : (
+        <>
+          {/* Relevant section */}
+          {hasScores && relevant.length > 0 && (
+            <section className="space-y-2">
+              <p className="text-label text-drift-text-tertiary px-0.5">Relevant to you now</p>
+              <AnimatePresence mode="popLayout">
+                {relevant.map(link => (
+                  <LinkCard
+                    key={link.id}
+                    link={link}
+                    onRead={() => handleStatus(link.id, link.status === 'read' ? 'active' : 'read')}
+                    onKeep={() => handleStatus(link.id, link.status === 'kept' ? 'active' : 'kept')}
+                    onRemove={() => handleRemove(link.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </section>
+          )}
+
+          {/* Other / all links */}
+          {(other.length > 0 || !hasScores) && (
+            <section className="space-y-2">
+              {hasScores && relevant.length > 0 && other.length > 0 && (
+                <p className="text-label text-drift-text-tertiary px-0.5 pt-2">Other saved</p>
+              )}
+              <AnimatePresence mode="popLayout">
+                {(hasScores ? other : filtered).map(link => (
+                  <LinkCard
+                    key={link.id}
+                    link={link}
+                    onRead={() => handleStatus(link.id, link.status === 'read' ? 'active' : 'read')}
+                    onKeep={() => handleStatus(link.id, link.status === 'kept' ? 'active' : 'kept')}
+                    onRemove={() => handleRemove(link.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </section>
+          )}
+        </>
       )}
+
     </div>
-  )
-}
-
-function FilterPills({ types, active, onChange }: {
-  types: FilterType[]
-  active: FilterType
-  onChange: (f: FilterType) => void
-}) {
-  const pills: FilterType[] = ['all', ...types]
-
-  return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-none">
-      {pills.map(type => (
-        <button
-          key={type}
-          onClick={() => onChange(type)}
-          className={cn(
-            'shrink-0 px-3 py-1.5 rounded-lg text-label border transition-all duration-200',
-            active === type
-              ? 'bg-drift-accent/15 text-drift-accent border-drift-accent/30'
-              : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
-          )}
-        >
-          {type === 'all' ? 'All' : (CONTENT_TYPE_LABELS[type] ?? type)}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function StreamingCard({ url, text, error, onRetry }: {
-  url: string
-  text: string
-  error: string | null
-  onRetry: () => void
-}) {
-  return (
-    <DriftCard className="relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent animate-pulse" />
-      <div className="px-5 pt-5 pb-4 space-y-3">
-        <div className="flex items-center gap-2.5">
-          {error ? (
-            <span className="text-label text-red-400">Assessment failed</span>
-          ) : (
-            <>
-              <div className="w-4 h-4 rounded-full border border-drift-accent/30 border-t-drift-accent animate-spin" />
-              <span className="text-label text-drift-text-tertiary">Analyzing...</span>
-            </>
-          )}
-        </div>
-        <p className="text-label text-drift-text-tertiary truncate">{url.length > 60 ? url.slice(0, 60) + '…' : url}</p>
-        {error ? (
-          <div className="space-y-2">
-            <p className="text-body-sm text-drift-text-secondary">
-              Assessment failed. Check your API key or try again.
-            </p>
-            <button
-              onClick={onRetry}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm bg-drift-accent/10 text-drift-accent border border-drift-accent/20 hover:bg-drift-accent/15 transition-all duration-200"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Try again
-            </button>
-          </div>
-        ) : text ? (
-          <p className="text-body-sm text-drift-text-secondary leading-relaxed">
-            {text}
-            <span className="inline-block w-0.5 h-3.5 bg-drift-accent ml-0.5 animate-pulse align-middle" />
-          </p>
-        ) : null}
-      </div>
-    </DriftCard>
-  )
-}
-
-function VerdictCard({ item, onToggleSave, onRemove }: {
-  item: StoredLinkAssessment
-  onToggleSave: (url: string) => void
-  onRemove: (assessedAt: string) => void
-}) {
-  const [saved, setSaved] = useState(item.save_to_digest)
-  const config = VERDICT_CONFIG[item.verdict] ?? VERDICT_CONFIG.skip
-  const contentTypeLabel = CONTENT_TYPE_LABELS[item.content_type] ?? 'Link'
-  const truncatedUrl = item.url.length > 60 ? item.url.slice(0, 60) + '…' : item.url
-
-  const handleToggle = () => {
-    setSaved(prev => !prev)
-    onToggleSave(item.url)
-  }
-
-  return (
-    <DriftCard className="relative overflow-hidden">
-      {/* Top accent line */}
-      <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.accent)} />
-
-      <div className="px-5 pt-5 pb-4 space-y-3.5">
-        {/* Header */}
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-label border bg-white/[0.04] border-white/[0.10] text-drift-text-secondary">
-            {contentTypeLabel}
-          </span>
-          <div className="flex-1" />
-          <RelevanceScore score={item.relevance_score} />
-        </div>
-
-        {/* URL subtitle */}
-        <p className="text-label text-drift-text-tertiary truncate">{truncatedUrl}</p>
-
-        {/* Title */}
-        <h3 className="text-h2 text-drift-text-primary leading-snug">{item.title}</h3>
-
-        {/* Summary */}
-        <p className="text-body text-drift-text-secondary leading-relaxed">{item.summary}</p>
-
-        {/* Verdict pill */}
-        <div className={cn(
-          'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-body-sm font-medium',
-          config.className
-        )}>
-          {config.label}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
-          <button
-            onClick={handleToggle}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
-              saved
-                ? 'bg-drift-accent/15 text-drift-accent border-drift-accent/30'
-                : 'bg-white/[0.04] text-drift-text-tertiary border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12]'
-            )}
-          >
-            <Bookmark className={cn('w-3.5 h-3.5', saved && 'fill-current')} />
-            {saved ? 'Saved to digest' : 'Save to digest'}
-          </button>
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Open
-          </a>
-          <div className="flex-1" />
-          <button
-            onClick={() => onRemove(item.assessedAt)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
-            title="Remove"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-    </DriftCard>
   )
 }

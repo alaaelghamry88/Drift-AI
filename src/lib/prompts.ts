@@ -183,3 +183,51 @@ export function profileGenerationPrompt(profile: DriftProfile): string {
 
 Return a single sentence describing what Drift will focus on for them. Be specific and personal.`
 }
+
+export function linkProcessingPrompt(
+  url: string,
+  title: string,
+  description: string
+): string {
+  return `You are processing a saved link for a developer's personal library.
+
+URL: ${url}
+Title: ${title}
+Description: ${description}
+
+Return a JSON object with exactly these fields:
+{
+  "summary": "<one sentence — what this is and why a developer would care, max 120 chars>",
+  "type": "<video|article|repo|tweet|other>"
+}
+
+Rules:
+- summary: one sentence, plain language, no hype
+- type: youtube.com/vimeo.com/loom.com → video, github.com → repo, x.com/twitter.com → tweet, else article
+- Return ONLY the JSON object, no markdown fences`
+}
+
+export function linkScoringPrompt(
+  context: string,
+  links: Array<{ id: string; title: string; summary: string }>
+): string {
+  const list = links
+    .map((l, i) => `${i + 1}. [${l.id}] ${l.title} — ${l.summary}`)
+    .join('\n')
+  return `You are scoring saved links by relevance to a developer's current work.
+
+Current context: "${context}"
+
+Links to score:
+${list}
+
+Return a JSON array with exactly these fields per item:
+[{ "id": "<link id>", "score": <0-10> }]
+
+Scoring guide:
+- 8–10: directly relevant to the context right now
+- 5–7: somewhat related, useful soon
+- 0–4: unrelated or too generic
+
+Return ONLY the JSON array, no markdown fences`
+}

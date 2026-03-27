@@ -4,10 +4,15 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BottomNav } from '@/components/ui/bottom-nav'
 import { useProfile } from '@/hooks/use-profile'
+import { archiveExpiredLinks } from '@/lib/saved-links'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, isLoaded } = useProfile()
   const router = useRouter()
+
+  useEffect(() => {
+    archiveExpiredLinks()
+  }, [])
 
   useEffect(() => {
     if (isLoaded && !profile) {

@@ -2,14 +2,17 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ArrowRight, Send, ChevronDown, ChevronUp, Trash2, RefreshCw } from 'lucide-react'
+import { Sparkles, ArrowRight, Send, ChevronDown, ChevronUp, Trash2, RefreshCw, Paperclip, X } from 'lucide-react'
 import { useProfile } from '@/hooks/use-profile'
 import { useStreaming } from '@/hooks/use-streaming'
 import { DriftCard } from '@/components/ui/drift-card'
+import { LinkPicker } from '@/components/links/link-picker'
+import { getActiveLinks } from '@/lib/saved-links'
 import { cn } from '@/lib/utils'
 import type { Verdict, StoredVerdict } from '@/types/verdict'
+import type { SavedLink } from '@/types/saved-link'
 
 // ─── localStorage helpers ──────────────────────────────────────────────────
 
@@ -317,6 +320,13 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
 
 // ─── AskTab ────────────────────────────────────────────────────────────────
 
+const SUGGESTION_CHIPS = [
+  'Is this worth my time?',
+  'How does this relate to my stack?',
+  'Give me the key takeaways',
+  'Should I save this for later?',
+]
+
 function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => void }) {
   const { profile } = useProfile()
   const { text: streamText, isStreaming, error: streamError, stream, reset } = useStreaming()
@@ -326,8 +336,20 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
   const [messages, setMessages] = useState<Message[]>([])
   const [originalQuery, setOriginalQuery] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
+  const [attachedLink, setAttachedLink] = useState<SavedLink | null>(null)
+  const [showPicker, setShowPicker] = useState(false)
+  const [savedLinks, setSavedLinks] = useState<SavedLink[]>([])
+
+  useEffect(() => {
+    setSavedLinks(getActiveLinks())
+  }, [])
 
   const verdictReceived = useRef(false)
+
+  const buildQuery = (text: string, link: SavedLink | null) => {
+    if (!link) return text
+    return `${text}\n\n[Attached link: "${link.title}" from ${link.siteName} — ${link.summary}]`
+  }
 
   const triggerQuery = useCallback(async (query: string, threadMessages: Message[], isFollowUp = false) => {
     if (!profile) return
@@ -375,20 +397,22 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
     }
   }, [profile, stream, reset, onSaveToHistory])
 
-  const handleAsk = useCallback(() => {
-    const trimmed = inputValue.trim()
+  const handleAsk = useCallback((overrideText?: string) => {
+    const trimmed = (overrideText ?? inputValue).trim()
     if (!trimmed || isStreaming) return
+
+    const finalQuery = buildQuery(trimmed, attachedLink)
 
     setCurrentVerdict(null)
     setMessages([])
     setParseError(null)
-    setOriginalQuery(trimmed)
+    setOriginalQuery(finalQuery)
     setInputValue('')
 
-    const initialMessages: Message[] = [{ role: 'user', content: trimmed }]
+    const initialMessages: Message[] = [{ role: 'user', content: finalQuery }]
     setMessages(initialMessages)
-    triggerQuery(trimmed, initialMessages)
-  }, [inputValue, isStreaming, triggerQuery])
+    triggerQuery(finalQuery, initialMessages)
+  }, [inputValue, attachedLink, isStreaming, triggerQuery])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleAsk()
@@ -418,13 +442,27 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
             disabled={isStreaming}
             className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none disabled:opacity-50"
           />
+          {savedLinks.length > 0 && (
+            <button
+              onClick={() => setShowPicker(true)}
+              title="Attach a link"
+              className={cn(
+                'flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 shrink-0',
+                attachedLink
+                  ? 'text-drift-accent bg-drift-accent/10'
+                  : 'text-drift-text-tertiary hover:text-drift-text-secondary hover:bg-white/[0.05]'
+              )}
+            >
+              <Paperclip className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </button>
+          )}
           <AnimatePresence>
             {inputValue.trim() && !isStreaming && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                onClick={handleAsk}
+                onClick={() => handleAsk()}
                 className="flex items-center gap-1.5 text-label text-drift-accent px-3 py-1.5 rounded-lg bg-drift-accent/10 hover:bg-drift-accent/20 transition-colors duration-200 shrink-0"
               >
                 Ask
@@ -433,7 +471,66 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
             )}
           </AnimatePresence>
         </div>
+
+        {/* Attached link chip */}
+        <AnimatePresence>
+          {attachedLink && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-2 px-4 pb-3">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-drift-accent/10 border border-drift-accent/20 min-w-0">
+                  <Paperclip className="w-3 h-3 text-drift-accent shrink-0" strokeWidth={1.5} />
+                  <span className="text-label text-drift-accent truncate">{attachedLink.title}</span>
+                  <button
+                    onClick={() => setAttachedLink(null)}
+                    className="text-drift-accent/60 hover:text-drift-accent shrink-0 ml-0.5"
+                  >
+                    <X className="w-3 h-3" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
+
+      {/* Suggestion chips when link attached */}
+      <AnimatePresence>
+        {attachedLink && !currentVerdict && !isStreaming && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            className="flex gap-2 flex-wrap"
+          >
+            {SUGGESTION_CHIPS.map(chip => (
+              <button
+                key={chip}
+                onClick={() => handleAsk(chip)}
+                className="px-3 py-1.5 rounded-full text-label bg-white/[0.04] border border-white/[0.07] text-drift-text-tertiary hover:text-drift-text-secondary hover:bg-white/[0.07] transition-all duration-200 shrink-0"
+              >
+                {chip}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Link picker */}
+      <AnimatePresence>
+        {showPicker && (
+          <LinkPicker
+            links={savedLinks}
+            onSelect={link => { setAttachedLink(link); setShowPicker(false) }}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Streaming card */}
       <AnimatePresence>
