@@ -17,6 +17,18 @@
 /.next/
 /out/
 
+# next-pwa generated files
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+
+# pwa-asset-generator generated files
+/public/apple-splash-*.jpg
+/public/apple-icon-180.png
+/public/icon-192.png
+/public/icon-512.png
+
 # production
 /build
 /.build

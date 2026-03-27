@@ -26,6 +26,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Drift — Your daily AI signal",
   description: "Calm, intelligent developer intelligence for the AI era.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Drift",
+  },
+  icons: {
+    apple: "/apple-icon-180.png",
+  },
 };
 
 export default function RootLayout({

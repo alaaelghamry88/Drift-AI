@@ -21,10 +21,10 @@ Four sub-features to implement independently:
 **What:** After cards load, the card with the highest `relevance_score` is pinned at the top as a visually distinct hero card — larger, with a glowing accent border. It has a "On it" button that marks it as read and collapses it to normal size with animation.
 
 **Tasks:**
-- [ ] In `DigestScreen`, after `cards` are set, derive `heroCard` = the card with max `relevance_score` (only when `cards.length > 0`)
-- [ ] Create `src/components/digest/hero-card.tsx` — same data as `DigestCardItem` but with larger title (`text-h1`), a `◈ Today's focus` label at the top, a stronger `drift-accent` border glow, and an "On it →" button that calls `onAction(id, 'read')`
-- [ ] Render `<HeroCard>` above the cards list, excluded from the `cards.map()` loop
-- [ ] Animate it in with `initial={{ opacity: 0, scale: 0.97 }}` and a slight delay before the rest of the cards
+- [x] In `DigestScreen`, after `cards` are set, derive `heroCard` = the card with max `relevance_score` (only when `cards.length > 0`)
+- [x] Create `src/components/digest/hero-card.tsx` — same data as `DigestCardItem` but with larger title (`text-h1`), a `◈ Today's focus` label at the top, a stronger `drift-accent` border glow, and an "On it →" button that calls `onAction(id, 'read')`
+- [x] Render `<HeroCard>` above the cards list, excluded from the `cards.map()` loop
+- [x] Animate it in with `initial={{ opacity: 0, scale: 0.97 }}` and a slight delay before the rest of the cards
 
 **Files:**
 - `src/components/digest/hero-card.tsx` — new component
@@ -37,11 +37,11 @@ Four sub-features to implement independently:
 **What:** Each digest card is horizontally draggable. Drag right → Save (green glow appears). Drag left → Mark as read (card fades out leftward). Directional hint labels fade in as you drag so the affordance is learnable.
 
 **Tasks:**
-- [ ] Wrap the `motion.div` in `DigestCardItem` with `drag="x"` and `dragConstraints={{ left: -120, right: 120 }}`
-- [ ] Use `useMotionValue` + `useTransform` to map drag x to: background tint (green right, blue left), opacity of hint labels ("Save →" / "← Done")
-- [ ] On `onDragEnd`: if `offset.x > 80` call `onAction(id, 'save')`; if `offset.x < -80` call `onAction(id, 'read')`; otherwise spring back to 0
-- [ ] Show hint labels as absolutely-positioned overlays on the card that appear at ~30px drag threshold
-- [ ] Disable drag when card is already actioned (`isSaved || isRead`)
+- [x] Wrap the `motion.div` in `DigestCardItem` with `drag="x"` and `dragConstraints={{ left: -120, right: 120 }}`
+- [x] Use `useMotionValue` + `useTransform` to map drag x to: background tint (green right, blue left), opacity of hint labels ("Save →" / "← Done")
+- [x] On `onDragEnd`: if `offset.x > 80` call `onAction(id, 'save')`; if `offset.x < -80` call `onAction(id, 'read')`; otherwise spring back to 0
+- [x] Show hint labels as absolutely-positioned overlays on the card that appear at ~30px drag threshold
+- [x] Disable drag when card is already actioned (`isSaved || isRead`)
 
 **Files:**
 - `src/components/digest/digest-screen.tsx` — swipe logic inside `DigestCardItem`
@@ -53,10 +53,10 @@ Four sub-features to implement independently:
 **What:** When `profile.currentContext` changes (user updates it), the feed visibly re-fetches and cards animate out then back in with new ordering. A brief "Re-ranking for your context..." label shows during the transition. Makes the context→relevance connection tangible.
 
 **Tasks:**
-- [ ] In `DigestScreen`, track a `prevContext` ref initialised to `profile.currentContext`
-- [ ] In a `useEffect` watching `profile.currentContext`: if it differs from `prevContext.current` and `cards.length > 0`, show a `isReranking` state with the label, then call `fetchDigest()` after a 400ms delay (enough for exit animations to start)
-- [ ] During `isReranking`, animate existing cards out with `exit={{ opacity: 0, y: -8 }}` before the skeleton appears
-- [ ] Update `prevContext.current` after re-fetch completes
+- [x] In `DigestScreen`, track a `prevContext` ref initialised to `profile.currentContext`
+- [x] In a `useEffect` watching `profile.currentContext`: if it differs from `prevContext.current` and `cards.length > 0`, show a `isReranking` state with the label, then call `fetchDigest()` after a 400ms delay (enough for exit animations to start)
+- [x] During `isReranking`, animate existing cards out with `exit={{ opacity: 0, y: -8 }}` before the skeleton appears
+- [x] Update `prevContext.current` after re-fetch completes
 
 **Files:**
 - `src/components/digest/digest-screen.tsx` — context change watcher + `isReranking` state
@@ -68,12 +68,12 @@ Four sub-features to implement independently:
 **What:** A short single-sentence banner at the top of the feed that describes what's new compared to yesterday's digest. Generated client-side by comparing card titles — no extra API call needed. E.g. *"3 new items today — Claude 4 and Vercel AI SDK dominate."*
 
 **Tasks:**
-- [ ] Move the digest cache from `sessionStorage` to `localStorage` with a date-keyed structure: `{ date: "2026-03-27", cards: [...] }`
-- [ ] On load, read yesterday's cache (date key = yesterday's ISO date string)
-- [ ] After new cards load, compute: `newCount` = cards whose titles don't appear in yesterday's list
-- [ ] If `newCount > 0` and yesterday's cache exists, derive a summary string: *"X new items today"* + the top 1–2 new titles joined with "and"
-- [ ] Render as a subtle `◈` prefixed line in `text-label text-drift-text-tertiary` below the header divider, animated in with `opacity: 0 → 1`
-- [ ] If it's the user's first ever load (no yesterday cache), skip the banner
+- [x] Move the digest cache from `sessionStorage` to `localStorage` with a date-keyed structure: `{ date: "2026-03-27", cards: [...] }`
+- [x] On load, read yesterday's cache (date key = yesterday's ISO date string)
+- [x] After new cards load, compute: `newCount` = cards whose titles don't appear in yesterday's list
+- [x] If `newCount > 0` and yesterday's cache exists, derive a summary string: *"X new items today"* + the top 1–2 new titles joined with "and"
+- [x] Render as a subtle `◈` prefixed line in `text-label text-drift-text-tertiary` below the header divider, animated in with `opacity: 0 → 1`
+- [x] If it's the user's first ever load (no yesterday cache), skip the banner
 
 **Files:**
 - `src/components/digest/digest-screen.tsx` — cache migration + shift banner
@@ -90,8 +90,8 @@ Four sub-features to implement independently:
 - Add a `/share` route that receives the shared URL and redirects to Drop with the URL pre-filled
 
 **Tasks:**
-- [ ] Update `public/manifest.json` to add `share_target` with `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
-- [ ] Create `src/app/share/page.tsx` — reads `?url=` param, saves the link via the same `handleSave` flow, then redirects to `/drop`
+- [x] Update `public/manifest.json` to add `share_target` with `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
+- [x] Create `src/app/share/page.tsx` — reads `?url=` param, saves the link via the same `handleSave` flow, then redirects to `/drop`
 - [ ] Verify the app is installable as a PWA (check `next-pwa` or equivalent is configured)
 
 **Files:**
