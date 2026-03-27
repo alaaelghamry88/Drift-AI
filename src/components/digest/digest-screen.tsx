@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
+import type { PanInfo } from 'framer-motion'
 import {
   Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
-  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library
+  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library, ArrowRight
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
 import type { DigestCard, CardAction } from '@/types/digest'
@@ -15,9 +16,8 @@ import { useStreaming } from '@/hooks/use-streaming'
 import { addLink, createSavedLink } from '@/lib/saved-links'
 import { cn } from '@/lib/utils'
 
-interface DigestScreenProps {
-  profile: DriftProfile
-}
+const CACHE_KEY = 'drift_digest_v2'
+const DEEPER_CACHE_KEY = 'drift_deeper_cache'
 
 const CARD_TYPE_CONFIG = {
   tool_release: {
@@ -57,6 +57,51 @@ const CARD_TYPE_CONFIG = {
   },
 }
 
+// ─── Cache helpers ────────────────────────────────────────────────────────────
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function yesterdayKey() {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function loadDigestCache(): { today: DigestCard[] | null; yesterday: DigestCard[] | null } {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return { today: null, yesterday: null }
+    const all = JSON.parse(raw) as Record<string, DigestCard[]>
+    return { today: all[todayKey()] ?? null, yesterday: all[yesterdayKey()] ?? null }
+  } catch {
+    return { today: null, yesterday: null }
+  }
+}
+
+function saveDigestToCache(cards: DigestCard[]) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    const all = raw ? (JSON.parse(raw) as Record<string, DigestCard[]>) : {}
+    const pruned: Record<string, DigestCard[]> = {}
+    const yk = yesterdayKey()
+    if (all[yk]) pruned[yk] = all[yk]
+    pruned[todayKey()] = cards
+    localStorage.setItem(CACHE_KEY, JSON.stringify(pruned))
+  } catch { /* ignore */ }
+}
+
+function computeShiftBanner(current: DigestCard[], previous: DigestCard[]): string | null {
+  const prevTitles = new Set(previous.map(c => c.title.toLowerCase()))
+  const newCount = current.filter(c => !prevTitles.has(c.title.toLowerCase())).length
+  if (newCount === 0) return null
+  if (newCount === current.length) return `Fresh digest — all ${newCount} items are new today.`
+  return `${newCount} of ${current.length} items are new since yesterday.`
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
 function CardSkeleton() {
   return (
     <div className="rounded-2xl border border-white/[0.12] bg-[#1d1b16]/60 backdrop-blur-2xl p-5 space-y-4 animate-pulse shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
@@ -82,6 +127,80 @@ function CardSkeleton() {
   )
 }
 
+// ─── Hero Card — Today's One Thing ────────────────────────────────────────────
+
+function HeroCard({ card, action, onAction }: {
+  card: DigestCard
+  action?: CardAction
+  onAction: (id: string, action: CardAction) => void
+}) {
+  const config = CARD_TYPE_CONFIG[card.card_type] ?? CARD_TYPE_CONFIG.article
+  const Icon = config.icon
+  const isDone = action === 'read' || action === 'save'
+
+  return (
+    <AnimatePresence>
+      {!isDone && (
+        <motion.div
+          layout
+          initial={{ opacity: 0, scale: 0.97, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: -8 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="rounded-2xl border border-drift-accent/25 bg-[#0a1410] shadow-[0_0_40px_rgba(77,217,192,0.06),inset_0_1px_0_rgba(77,217,192,0.08)] relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-drift-accent/80 via-drift-accent/30 to-transparent" />
+          <div className="px-5 pt-5 pb-4 space-y-3.5">
+            <div className="flex items-center gap-2.5">
+              <span className="text-label text-drift-accent/70 tracking-[0.10em] uppercase">◈ Today's focus</span>
+              <div className="flex-1" />
+              <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-label border', config.bg, config.color)}>
+                <Icon className="w-3 h-3" strokeWidth={2} />
+                {config.label}
+              </span>
+            </div>
+            <h2 className="text-h1 text-drift-text-primary leading-snug">{card.title}</h2>
+            <p className="text-body text-drift-text-secondary leading-relaxed">{card.summary}</p>
+            <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-drift-accent/[0.04] border border-drift-accent/[0.10]">
+              <span className="shrink-0 mt-[3px] text-[9px] leading-none text-drift-accent">◈</span>
+              <p className="text-body-sm text-drift-text-secondary/75 leading-relaxed">{card.relevance_reason}</p>
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-drift-accent/[0.08]">
+              <button
+                onClick={() => onAction(card.id, 'read')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-body-sm bg-drift-accent/10 text-drift-accent border border-drift-accent/20 hover:bg-drift-accent/15 transition-all duration-200 font-medium"
+              >
+                On it
+                <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => onAction(card.id, 'save')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary transition-all duration-200"
+              >
+                <Bookmark className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Save
+              </button>
+              <div className="flex-1" />
+              {card.source_url && (
+                <a
+                  href={card.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary hover:border-white/[0.12] transition-all duration-200"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+// ─── Digest Card Item ─────────────────────────────────────────────────────────
+
 function DigestCardItem({
   card,
   profile,
@@ -92,6 +211,7 @@ function DigestCardItem({
   onUndo,
   onToggleExpand,
   onDeeperLoaded,
+  onSwipeDismiss,
 }: {
   card: DigestCard
   profile: DriftProfile
@@ -102,18 +222,15 @@ function DigestCardItem({
   onUndo: (id: string) => void
   onToggleExpand: (id: string) => void
   onDeeperLoaded: (id: string, text: string) => void
+  onSwipeDismiss: (id: string) => void
 }) {
   const config = CARD_TYPE_CONFIG[card.card_type] ?? CARD_TYPE_CONFIG.article
   const Icon = config.icon
   const { text: streamedText, isStreaming, stream } = useStreaming()
-
   const deeperText = cachedDeeperText ?? streamedText
 
   const handleGoDeeper = useCallback(async () => {
-    if (isExpanded) {
-      onToggleExpand(card.id)
-      return
-    }
+    if (isExpanded) { onToggleExpand(card.id); return }
     onToggleExpand(card.id)
     if (cachedDeeperText) return
     const result = await stream(() =>
@@ -128,6 +245,7 @@ function DigestCardItem({
 
   const isSaved = action === 'save'
   const isRead = action === 'read'
+  const isActioned = isSaved || isRead
   const [savedToLinks, setSavedToLinks] = useState(false)
 
   const handleSaveToLinks = useCallback(() => {
@@ -147,44 +265,58 @@ function DigestCardItem({
     setSavedToLinks(true)
   }, [savedToLinks, card])
 
+  // Swipe to triage
+  const x = useMotionValue(0)
+  const saveOpacity = useTransform(x, [30, 90], [0, 1])
+  const readOpacity = useTransform(x, [-30, -90], [0, 1])
+
+  const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
+    if (info.offset.x > 80) {
+      onAction(card.id, 'save')
+      animate(x, 600, { duration: 0.2, ease: [0.4, 0, 1, 1] })
+      setTimeout(() => onSwipeDismiss(card.id), 200)
+    } else if (info.offset.x < -80) {
+      onAction(card.id, 'read')
+      animate(x, -600, { duration: 0.2, ease: [0.4, 0, 1, 1] })
+      setTimeout(() => onSwipeDismiss(card.id), 200)
+    } else {
+      animate(x, 0, { type: 'spring', stiffness: 400, damping: 30 })
+    }
+  }, [card.id, onAction, onSwipeDismiss, x])
+
   return (
     <motion.div
       layout
+      drag={isActioned ? false : 'x'}
+      dragConstraints={{ left: -200, right: 200 }}
+      dragElastic={0}
+      dragMomentum={false}
+      onDragEnd={handleDragEnd}
+      style={{ x }}
       exit={{ opacity: 0, x: isRead ? -40 : 0, scale: 0.98 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className={cn('relative touch-pan-y select-none', !isActioned && 'cursor-grab active:cursor-grabbing')}
     >
       <DriftCard glowing={isSaved} className={cn(isRead && 'opacity-50', 'relative overflow-hidden')}>
-
-        {/* Top type-colour accent line */}
         <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.topAccent)} />
-
         <div className="px-5 pt-5 pb-4 space-y-3.5">
 
-          {/* Header row: badge · saved label · score */}
+          {/* Header row */}
           <div className="flex items-center gap-2.5">
-            <span className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-label border',
-              config.bg, config.color
-            )}>
+            <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-label border', config.bg, config.color)}>
               <Icon className="w-3 h-3" strokeWidth={2} />
               {config.label}
             </span>
-            {isSaved && (
-              <span className="text-label text-drift-accent/60 tracking-wide">· Saved</span>
-            )}
+            {isSaved && <span className="text-label text-drift-accent/60 tracking-wide">· Saved</span>}
             <div className="flex-1" />
             <RelevanceScore score={card.relevance_score} />
           </div>
 
           {/* Title */}
-          <h3 className="text-h2 text-drift-text-primary leading-snug">
-            {card.title}
-          </h3>
+          <h3 className="text-h2 text-drift-text-primary leading-snug">{card.title}</h3>
 
           {/* Summary */}
-          <p className="text-body text-drift-text-secondary leading-relaxed">
-            {card.summary}
-          </p>
+          <p className="text-body text-drift-text-secondary leading-relaxed">{card.summary}</p>
 
           {/* Why it matters */}
           <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
@@ -192,7 +324,7 @@ function DigestCardItem({
             <p className="text-body-sm text-drift-text-secondary/75 leading-relaxed">{card.relevance_reason}</p>
           </div>
 
-          {/* Deeper dive — streaming */}
+          {/* Deeper dive */}
           <AnimatePresence>
             {isExpanded && (
               <motion.div
@@ -300,12 +432,29 @@ function DigestCardItem({
 
         </div>
       </DriftCard>
+
+      {/* Swipe hints — rendered after DriftCard so they sit on top */}
+      <motion.span
+        style={{ opacity: saveOpacity }}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-label text-drift-accent font-medium pointer-events-none select-none z-10"
+      >
+        Save →
+      </motion.span>
+      <motion.span
+        style={{ opacity: readOpacity }}
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-label text-blue-400 font-medium pointer-events-none select-none z-10"
+      >
+        ← Done
+      </motion.span>
     </motion.div>
   )
 }
 
-const CACHE_KEY = 'drift_digest_cache'
-const DEEPER_CACHE_KEY = 'drift_deeper_cache'
+// ─── Digest Screen ─────────────────────────────────────────────────────────────
+
+interface DigestScreenProps {
+  profile: DriftProfile
+}
 
 export function DigestScreen({ profile }: DigestScreenProps) {
   const [cards, setCards] = useState<DigestCard[]>([])
@@ -314,13 +463,20 @@ export function DigestScreen({ profile }: DigestScreenProps) {
   const [deeperCache, setDeeperCache] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [shiftBanner, setShiftBanner] = useState<string | null>(null)
+  const [rerankLabel, setRerankLabel] = useState<string | null>(null)
+  const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set())
 
-  // Restore from sessionStorage after hydration
+  // Refs for context pulse
+  const prevContextRef = useRef(profile.currentContext)
+  const fetchDigestRef = useRef<() => Promise<void>>()
+  const cardsRef = useRef(cards)
+  useEffect(() => { cardsRef.current = cards }, [cards])
+
+  // Restore from localStorage on mount
   useEffect(() => {
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY)
-      if (cached) setCards(JSON.parse(cached) as DigestCard[])
-    } catch { /* ignore */ }
+    const { today } = loadDigestCache()
+    if (today) setCards(today)
     try {
       const cached = sessionStorage.getItem(DEEPER_CACHE_KEY)
       if (cached) setDeeperCache(JSON.parse(cached) as Record<string, string>)
@@ -338,6 +494,8 @@ export function DigestScreen({ profile }: DigestScreenProps) {
     setCards([])
     setActions({})
     setExpandedCards(new Set())
+    setSwipedIds(new Set())
+    setShiftBanner(null)
     try {
       const res = await fetch('/api/digest', {
         method: 'POST',
@@ -348,13 +506,30 @@ export function DigestScreen({ profile }: DigestScreenProps) {
       const data = await res.json() as { cards: DigestCard[] }
       const fetched = data.cards ?? []
       setCards(fetched)
-      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(fetched)) } catch { /* ignore */ }
+      // What shifted banner
+      const { yesterday } = loadDigestCache()
+      saveDigestToCache(fetched)
+      if (yesterday) setShiftBanner(computeShiftBanner(fetched, yesterday))
     } catch {
       setLoadError(true)
     } finally {
       setIsLoading(false)
+      setRerankLabel(null)
     }
   }, [profile])
+
+  // Keep ref in sync
+  useEffect(() => { fetchDigestRef.current = fetchDigest }, [fetchDigest])
+
+  // Context pulse — re-fetch when currentContext changes
+  useEffect(() => {
+    if (prevContextRef.current === profile.currentContext) return
+    prevContextRef.current = profile.currentContext
+    if (cardsRef.current.length === 0) return
+    setRerankLabel('Re-ranking for your new context…')
+    const timer = setTimeout(() => { fetchDigestRef.current?.() }, 500)
+    return () => clearTimeout(timer)
+  }, [profile.currentContext])
 
   const handleAction = useCallback((id: string, action: CardAction) => {
     setActions(prev => ({ ...prev, [id]: action }))
@@ -372,6 +547,10 @@ export function DigestScreen({ profile }: DigestScreenProps) {
     })
   }, [])
 
+  const handleSwipeDismiss = useCallback((id: string) => {
+    setSwipedIds(prev => new Set([...prev, id]))
+  }, [])
+
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev)
@@ -380,6 +559,12 @@ export function DigestScreen({ profile }: DigestScreenProps) {
       return next
     })
   }, [])
+
+  // Hero card — highest relevance_score card
+  const heroCard = cards.length > 0 && !swipedIds.has(cards.reduce((a, b) => a.relevance_score >= b.relevance_score ? a : b).id)
+    ? cards.reduce((a, b) => a.relevance_score >= b.relevance_score ? a : b)
+    : null
+  const restCards = cards.filter(c => c.id !== heroCard?.id && !swipedIds.has(c.id))
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -410,6 +595,32 @@ export function DigestScreen({ profile }: DigestScreenProps) {
               </button>
             )}
           </div>
+
+          {/* What shifted / rerank banners */}
+          <AnimatePresence mode="wait">
+            {rerankLabel ? (
+              <motion.p
+                key="rerank"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-label text-drift-accent/60 mt-2"
+              >
+                ◈ {rerankLabel}
+              </motion.p>
+            ) : shiftBanner ? (
+              <motion.p
+                key="shift"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-label text-drift-text-tertiary mt-2"
+              >
+                ◈ {shiftBanner}
+              </motion.p>
+            ) : null}
+          </AnimatePresence>
+
           <div className="mt-5 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
         </div>
       )}
@@ -457,9 +668,20 @@ export function DigestScreen({ profile }: DigestScreenProps) {
 
       {/* Cards */}
       {!isLoading && !isDone && cards.length > 0 && (
-        <AnimatePresence mode="popLayout">
-          <div className="space-y-6">
-            {cards.map((card, i) => (
+        <div className="space-y-6">
+          {/* Hero card */}
+          {heroCard && (
+            <HeroCard
+              key={heroCard.id}
+              card={heroCard}
+              action={actions[heroCard.id]}
+              onAction={handleAction}
+            />
+          )}
+
+          {/* Rest of cards */}
+          <AnimatePresence mode="popLayout">
+            {restCards.map((card, i) => (
               <motion.div
                 key={card.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -476,11 +698,12 @@ export function DigestScreen({ profile }: DigestScreenProps) {
                   onUndo={handleUndo}
                   onToggleExpand={handleToggleExpand}
                   onDeeperLoaded={handleDeeperLoaded}
+                  onSwipeDismiss={handleSwipeDismiss}
                 />
               </motion.div>
             ))}
-          </div>
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
       )}
 
       {/* Empty state */}
