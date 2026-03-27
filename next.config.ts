@@ -11,6 +11,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   distDir: '.build',
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { addLink, createSavedLink } from '@/lib/saved-links'
 
-export default function SharePage() {
+function ShareHandler() {
   const router = useRouter()
   const params = useSearchParams()
   const handled = useRef(false)
@@ -13,7 +13,6 @@ export default function SharePage() {
     if (handled.current) return
     handled.current = true
 
-    // Prefer explicit `url` param; fall back to `text` (some share sheets put the URL there)
     const url = params.get('url') || params.get('text') || ''
 
     if (!url) {
@@ -21,7 +20,6 @@ export default function SharePage() {
       return
     }
 
-    // Validate
     try { new URL(url) } catch {
       router.replace('/drop')
       return
@@ -48,7 +46,6 @@ export default function SharePage() {
         })
         addLink(link)
       } catch {
-        // Fallback: save minimal link so the user doesn't lose it
         const link = createSavedLink({
           url,
           title: url,
@@ -69,9 +66,20 @@ export default function SharePage() {
     save()
   }, [params, router])
 
+  return null
+}
+
+const Saving = () => (
+  <div className="min-h-screen bg-drift-base flex items-center justify-center">
+    <p className="text-body text-drift-text-tertiary">Saving link…</p>
+  </div>
+)
+
+export default function SharePage() {
   return (
-    <div className="min-h-screen bg-drift-base flex items-center justify-center">
-      <p className="text-body text-drift-text-tertiary">Saving link…</p>
-    </div>
+    <Suspense fallback={<Saving />}>
+      <ShareHandler />
+      <Saving />
+    </Suspense>
   )
 }

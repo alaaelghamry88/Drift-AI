@@ -469,7 +469,7 @@ export function DigestScreen({ profile }: DigestScreenProps) {
 
   // Refs for context pulse
   const prevContextRef = useRef(profile.currentContext)
-  const fetchDigestRef = useRef<() => Promise<void>>()
+  const fetchDigestRef = useRef<(() => Promise<void>) | undefined>(undefined)
   const cardsRef = useRef(cards)
   useEffect(() => { cardsRef.current = cards }, [cards])
 

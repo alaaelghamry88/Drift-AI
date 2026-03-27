@@ -21,10 +21,26 @@
   "share_target": {
     "action": "/share",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "url": "url",
       "title": "title",
       "text": "text"
     }
-  }
+  },
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "label": "Drift — Drop tab"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Drift — Drop tab"
+    }
+  ]
 }
