@@ -17,6 +17,7 @@ import {
   createSavedLink,
 } from '@/lib/saved-links'
 import type { SavedLink } from '@/types/saved-link'
+import { logActivity } from '@/lib/activity-log'
 import { ContextBar } from '@/components/links/context-bar'
 import { TagFilter } from '@/components/links/tag-filter'
 import { LinkCard } from '@/components/links/link-card'
@@ -100,6 +101,7 @@ export default function DropPage() {
         source: 'manual',
       })
       addLink(link)
+      logActivity('link_saved')
       setLinks(getActiveLinks())
       // Score the new link immediately
       if (context) {
@@ -126,11 +128,14 @@ export default function DropPage() {
 
   const handleStatus = useCallback((id: string, status: SavedLink['status']) => {
     updateLinkStatus(id, status)
+    if (status === 'read') logActivity('link_read')
+    else if (status === 'kept') logActivity('link_kept')
     setLinks(getActiveLinks())
   }, [])
 
   const handleRemove = useCallback((id: string) => {
     removeLink(id)
+    logActivity('link_removed')
     setLinks(getActiveLinks())
   }, [])
 
@@ -220,7 +225,7 @@ export default function DropPage() {
       </motion.div>
 
       {/* Type filter */}
-      {allTypes.length > 1 && (
+      {allTypes.length > 0 && (
         <TagFilter
           tags={allTypes}
           active={activeTypes}

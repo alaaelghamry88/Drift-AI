@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import type { PanInfo } from 'framer-motion'
 import {
   Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
-  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library, ArrowRight
+  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library, ArrowRight, Pencil
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
 import type { DigestCard, CardAction } from '@/types/digest'
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 
 const CACHE_KEY = 'drift_digest_v2'
 const DEEPER_CACHE_KEY = 'drift_deeper_cache'
+const ACTIONS_SESSION_KEY = 'drift_digest_actions'
 
 const CARD_TYPE_CONFIG = {
   tool_release: {
@@ -138,6 +139,22 @@ function HeroCard({ card, action, onAction }: {
   const Icon = config.icon
   const isDone = action === 'read' || action === 'save'
 
+  const handleSaveToLinks = useCallback(() => {
+    if (!card.source_url) return
+    const link = createSavedLink({
+      url: card.source_url,
+      title: card.title,
+      summary: card.summary,
+      thumbnail: null,
+      favicon: null,
+      siteName: (() => { try { return new URL(card.source_url).hostname } catch { return '' } })(),
+      type: card.card_type === 'video' ? 'video' : card.card_type === 'repo' ? 'repo' : 'article',
+      tags: [],
+      source: 'feed',
+    })
+    addLink(link)
+  }, [card])
+
   return (
     <AnimatePresence>
       {!isDone && (
@@ -174,7 +191,7 @@ function HeroCard({ card, action, onAction }: {
                 <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
               <button
-                onClick={() => onAction(card.id, 'save')}
+                onClick={() => { handleSaveToLinks(); onAction(card.id, 'save') }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary transition-all duration-200"
               >
                 <Bookmark className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -272,6 +289,7 @@ function DigestCardItem({
 
   const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
     if (info.offset.x > 80) {
+      handleSaveToLinks()
       onAction(card.id, 'save')
       animate(x, 600, { duration: 0.2, ease: [0.4, 0, 1, 1] })
       setTimeout(() => onSwipeDismiss(card.id), 200)
@@ -358,7 +376,7 @@ function DigestCardItem({
           <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
             <div className={cn('flex items-center gap-2 flex-1', isRead && 'pointer-events-none')}>
               <button
-                onClick={() => onAction(card.id, 'save')}
+                onClick={() => { onAction(card.id, 'save'); handleSaveToLinks() }}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
                   isSaved
@@ -452,11 +470,15 @@ function DigestCardItem({
 
 // ─── Digest Screen ─────────────────────────────────────────────────────────────
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
 interface DigestScreenProps {
   profile: DriftProfile
+  onUpdateContext: (ctx: string) => void
+  contextUpdatedAt: string
 }
 
-export function DigestScreen({ profile }: DigestScreenProps) {
+export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: DigestScreenProps) {
   const [cards, setCards] = useState<DigestCard[]>([])
   const [actions, setActions] = useState<Record<string, CardAction>>({})
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
@@ -466,6 +488,8 @@ export function DigestScreen({ profile }: DigestScreenProps) {
   const [shiftBanner, setShiftBanner] = useState<string | null>(null)
   const [rerankLabel, setRerankLabel] = useState<string | null>(null)
   const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set())
+  const [isEditingContext, setIsEditingContext] = useState(false)
+  const [contextDraft, setContextDraft] = useState(profile.currentContext)
 
   // Refs for context pulse
   const prevContextRef = useRef(profile.currentContext)
@@ -478,10 +502,21 @@ export function DigestScreen({ profile }: DigestScreenProps) {
     const { today } = loadDigestCache()
     if (today) setCards(today)
     try {
+      const cachedActions = sessionStorage.getItem(ACTIONS_SESSION_KEY)
+      if (cachedActions) setActions(JSON.parse(cachedActions) as Record<string, CardAction>)
       const cached = sessionStorage.getItem(DEEPER_CACHE_KEY)
       if (cached) setDeeperCache(JSON.parse(cached) as Record<string, string>)
     } catch { /* ignore */ }
   }, [])
+
+  // Persist actions so they survive tab navigation
+  // Guard against empty object to avoid overwriting stored data on initial render
+  useEffect(() => {
+    if (Object.keys(actions).length === 0) return
+    try {
+      sessionStorage.setItem(ACTIONS_SESSION_KEY, JSON.stringify(actions))
+    } catch { /* ignore */ }
+  }, [actions])
 
   const isDone = cards.length > 0 && cards.every(c => {
     const a = actions[c.id]
@@ -493,6 +528,7 @@ export function DigestScreen({ profile }: DigestScreenProps) {
     setLoadError(false)
     setCards([])
     setActions({})
+    try { sessionStorage.removeItem(ACTIONS_SESSION_KEY) } catch { /* ignore */ }
     setExpandedCards(new Set())
     setSwipedIds(new Set())
     setShiftBanner(null)
@@ -577,14 +613,55 @@ export function DigestScreen({ profile }: DigestScreenProps) {
       {!isDone && (
         <div className="mb-8">
           <div className="flex items-start justify-between">
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-label text-drift-text-tertiary tracking-[0.10em] mb-2">{today}</p>
               <h1 className="text-h1 text-drift-text-primary leading-none">Your Drift</h1>
-              <p className="text-body-sm text-drift-text-tertiary mt-2">
-                {profile.role}
-                <span className="mx-1.5 opacity-30">·</span>
-                {profile.stack.slice(0, 3).join(' · ')}
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                {isEditingContext ? (
+                  <input
+                    autoFocus
+                    value={contextDraft}
+                    onChange={e => setContextDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        onUpdateContext(contextDraft.trim() || profile.currentContext)
+                        setIsEditingContext(false)
+                      }
+                      if (e.key === 'Escape') {
+                        setContextDraft(profile.currentContext)
+                        setIsEditingContext(false)
+                      }
+                    }}
+                    onBlur={() => {
+                      onUpdateContext(contextDraft.trim() || profile.currentContext)
+                      setIsEditingContext(false)
+                    }}
+                    className="bg-transparent text-body-sm text-drift-text-primary outline-none placeholder:text-drift-text-tertiary w-full"
+                    placeholder="What are you building right now?"
+                  />
+                ) : Date.now() - new Date(contextUpdatedAt).getTime() > SEVEN_DAYS_MS ? (
+                  <button
+                    onClick={() => { setContextDraft(profile.currentContext); setIsEditingContext(true) }}
+                    className="text-body-sm text-amber-400 hover:text-amber-300 transition-colors duration-200"
+                  >
+                    Update your focus →
+                  </button>
+                ) : (
+                  <>
+                    <span className="text-body-sm text-drift-text-tertiary truncate flex-1">
+                      {profile.currentContext.length > 60
+                        ? profile.currentContext.slice(0, 57) + '…'
+                        : profile.currentContext}
+                    </span>
+                    <button
+                      onClick={() => { setContextDraft(profile.currentContext); setIsEditingContext(true) }}
+                      className="text-drift-text-tertiary hover:text-drift-accent transition-colors duration-200 shrink-0"
+                    >
+                      <Pencil className="w-3 h-3" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             {!isLoading && (
               <button
