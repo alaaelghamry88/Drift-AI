@@ -37,13 +37,18 @@
 
 ---
 
-## Phase 4 — Link Drop
-- [x] Persistent link drop input on home screen
-- [x] Full link drop page (`/drop`)
-- [x] Claude web fetch — read and analyze the URL
-- [x] Streaming assessment output
-- [x] Verdict display — worth it / save for later / skip
-- [x] Slot "save for later" links into next digest
+## Phase 4 — Drop (Link Library)
+- [x] Drop page layout and URL input (`/drop`)
+- [x] `POST /api/links` — metadata extraction (title, summary, type, thumbnail, favicon)
+- [x] Link type detection — video, article, repo, tweet, other
+- [x] localStorage CRUD — add, update status, remove, archive expired
+- [x] Context bar — display and inline edit of current work context
+- [x] `POST /api/links/score` — batch relevance scoring against context (0–10)
+- [x] Relevance sections — "Relevant to you now" (6+) vs "Other saved"
+- [x] Type filter chips
+- [x] Link card — Read / Keep / Remove actions with status styling
+- [x] Auto-archival on page load + 24-hour expiry warning nudge
+- [x] Save sheet (FAB) for quick capture from other screens
 
 ---
 
@@ -84,7 +89,7 @@
 Phase 1 → Setup
 Phase 2 → Onboarding
 Phase 3 → Daily Digest      ← Most important screen
-Phase 4 → Link Drop
+Phase 4 → Drop (Link Library)
 Phase 5 → Ask Drift
 Phase 6 → Profile
 Phase 7 → Polish
