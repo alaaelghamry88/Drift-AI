@@ -11,6 +11,7 @@ import { DriftCard } from '@/components/ui/drift-card'
 import { LinkPicker } from '@/components/links/link-picker'
 import { getActiveLinks } from '@/lib/saved-links'
 import { cn } from '@/lib/utils'
+import { logActivity } from '@/lib/activity-log'
 import type { Verdict, StoredVerdict } from '@/types/verdict'
 import type { SavedLink } from '@/types/saved-link'
 
@@ -378,6 +379,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
             createdAt: new Date().toISOString(),
           }
           setCurrentVerdict(verdict)
+          logActivity('verdict_made')
 
           const assistantMessage: Message = { role: 'assistant', content: accumulated }
           const newMessages: Message[] = [...threadMessages, assistantMessage]

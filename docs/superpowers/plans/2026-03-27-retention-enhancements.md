@@ -1,6 +1,6 @@
 # Retention Enhancements — Daily-Use Improvements
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make Drift a tool people return to daily — not just when they remember it exists. Five independent problems identified from product review, each tackled separately.
 
@@ -92,7 +92,7 @@ Four sub-features to implement independently:
 **Tasks:**
 - [x] Update `public/manifest.json` to add `share_target` with `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
 - [x] Create `src/app/share/page.tsx` — reads `?url=` param, saves the link via the same `handleSave` flow, then redirects to `/drop`
-- [ ] Verify the app is installable as a PWA (check `next-pwa` or equivalent is configured)
+- [x] Verify the app is installable as a PWA (check `next-pwa` or equivalent is configured)
 
 **Files:**
 - `public/manifest.json`
@@ -108,14 +108,14 @@ Four sub-features to implement independently:
 Replace the static `profile.role · stack` subtitle line in the Feed header with the current context. Make it tappable — tap opens an inline edit field right there. No new chrome. Combined with a 7-day stale nudge that turns the line amber.
 
 **Tasks:**
-- [ ] In `DigestScreen`, replace the `profile.role · stack` subtitle with `profile.currentContext` (truncated to ~60 chars)
-- [ ] Add a `Pencil` icon (12px, tertiary colour) inline after the text
-- [ ] Track `isEditingContext` boolean state in `DigestScreen`
-- [ ] When tapped, swap the text line for an inline `<input>` pre-filled with `profile.currentContext`, same style as `ContextBar`
-- [ ] On Enter or blur: call `updateProfile({ currentContext: value })` from `useProfile`, then set `isEditingContext` to false
-- [ ] After save, trigger a re-fetch of the digest (same as context pulse in 1c) since the context just changed
-- [ ] In `useProfile`, expose `contextUpdatedAt` (store alongside profile in localStorage, default to `profile.createdAt`)
-- [ ] If `Date.now() - contextUpdatedAt > 7 days`, render the context line in `text-amber-400` with label *"Update your focus →"* instead of the context text
+- [x] In `DigestScreen`, replace the `profile.role · stack` subtitle with `profile.currentContext` (truncated to ~60 chars)
+- [x] Add a `Pencil` icon (12px, tertiary colour) inline after the text
+- [x] Track `isEditingContext` boolean state in `DigestScreen`
+- [x] When tapped, swap the text line for an inline `<input>` pre-filled with `profile.currentContext`, same style as `ContextBar`
+- [x] On Enter or blur: call `updateProfile({ currentContext: value })` from `useProfile`, then set `isEditingContext` to false
+- [x] After save, trigger a re-fetch of the digest (same as context pulse in 1c) since the context just changed
+- [x] In `useProfile`, expose `contextUpdatedAt` (store alongside profile in localStorage, default to `profile.createdAt`)
+- [x] If `Date.now() - contextUpdatedAt > 7 days`, render the context line in `text-amber-400` with label *"Update your focus →"* instead of the context text
 
 **Files:**
 - `src/components/digest/digest-screen.tsx` — tappable context line replacing role/stack subtitle
@@ -132,11 +132,11 @@ Replace the static `profile.role · stack` subtitle line in the Feed header with
 - Show a small streak counter (days with at least one action) in the Me tab
 
 **Tasks:**
-- [ ] Create `src/lib/activity-log.ts` — append-only log of actions (`link_saved`, `link_read`, `link_kept`, `verdict_made`) stored in localStorage with ISO timestamps
-- [ ] Instrument Drop (`handleStatus`, `handleSave`) and Ask (on verdict received) to write activity log entries
-- [ ] On the Profile/Me page, compute and display: links saved this week, links triaged (read/kept/removed), verdicts made
-- [ ] Compute current streak (consecutive days with ≥1 logged action) and show next to the profile avatar/header
-- [ ] Cap the log at 90 days of entries to avoid localStorage bloat
+- [x] Create `src/lib/activity-log.ts` — append-only log of actions (`link_saved`, `link_read`, `link_kept`, `verdict_made`) stored in localStorage with ISO timestamps
+- [x] Instrument Drop (`handleStatus`, `handleSave`) and Ask (on verdict received) to write activity log entries
+- [x] On the Profile/Me page, compute and display: links saved this week, links triaged (read/kept/removed), verdicts made
+- [x] Compute current streak (consecutive days with ≥1 logged action) and show next to the profile avatar/header
+- [x] Cap the log at 90 days of entries to avoid localStorage bloat
 
 **Files:**
 - `src/lib/activity-log.ts` — new

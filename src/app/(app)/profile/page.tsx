@@ -5,10 +5,12 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Edit2, RefreshCw, RotateCcw, Zap, Clock, TrendingUp } from 'lucide-react'
+import { Check, Edit2, RefreshCw, RotateCcw, Zap, Clock, TrendingUp, Flame } from 'lucide-react'
 import { useProfile } from '@/hooks/use-profile'
 import { DriftCard } from '@/components/ui/drift-card'
 import { cn } from '@/lib/utils'
+import { getWeeklyStats, getCurrentStreak } from '@/lib/activity-log'
+import type { WeeklyStats } from '@/lib/activity-log'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -69,6 +71,13 @@ function ProfilePageContent() {
 
   const [isEditingContext, setIsEditingContext] = useState(false)
   const [contextDraft, setContextDraft] = useState('')
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({ linksSaved: 0, linksTriaged: 0, verdictsMade: 0 })
+  const [streak, setStreak] = useState(0)
+
+  useEffect(() => {
+    setWeeklyStats(getWeeklyStats())
+    setStreak(getCurrentStreak())
+  }, [])
 
   const [assessment, setAssessment] = useState<WorkflowAssessment | null>(() => {
     try {
@@ -146,15 +155,21 @@ function ProfilePageContent() {
       {/* Drift Profile card */}
       <DriftCard>
         <div className="px-6 py-5 space-y-5">
-          {/* Role */}
+          {/* Role + streak */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-drift-accent/10 border border-drift-accent/25 flex items-center justify-center shrink-0">
               <span className="text-drift-accent text-base" style={{ fontFamily: 'var(--font-heading)' }}>∿</span>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-label text-drift-text-tertiary uppercase tracking-wide mb-0.5">Role</p>
               <p className="text-body font-medium text-drift-text-primary">{profile.role}</p>
             </div>
+            {streak > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-400/[0.08] border border-amber-400/20 shrink-0">
+                <Flame className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />
+                <span className="text-label text-amber-400 font-medium">{streak}d</span>
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-white/[0.05]" />
@@ -244,6 +259,27 @@ function ProfilePageContent() {
                 </motion.p>
               )}
             </AnimatePresence>
+          </div>
+        </div>
+      </DriftCard>
+
+      {/* Weekly stats strip */}
+      <DriftCard>
+        <div className="px-6 py-4">
+          <p className="text-label text-drift-text-tertiary uppercase tracking-wide mb-3">This week</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.linksSaved}</p>
+              <p className="text-label text-drift-text-tertiary mt-1">saved</p>
+            </div>
+            <div className="text-center border-x border-white/[0.06]">
+              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.linksTriaged}</p>
+              <p className="text-label text-drift-text-tertiary mt-1">triaged</p>
+            </div>
+            <div className="text-center">
+              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.verdictsMade}</p>
+              <p className="text-label text-drift-text-tertiary mt-1">verdicts</p>
+            </div>
           </div>
         </div>
       </DriftCard>
