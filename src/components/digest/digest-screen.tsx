@@ -761,7 +761,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
 
       {/* Loading skeletons */}
       {isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {[...Array(4)].map((_, i) => (
             <motion.div
               key={i}
@@ -802,44 +802,53 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
 
       {/* Cards */}
       {!isLoading && !isDone && cards.length > 0 && (
-        <div className="space-y-6">
-          {/* Hero card */}
+        <div>
+          {/* Hero card — primary focus */}
           {heroCard && (
-            <HeroCard
-              key={heroCard.id}
-              card={heroCard}
-              action={actions[heroCard.id]}
-              onAction={handleAction}
-              onDismiss={handleDismiss}
-            />
+            <div className={restCards.length > 0 ? 'mb-8' : undefined}>
+              <HeroCard
+                key={heroCard.id}
+                card={heroCard}
+                action={actions[heroCard.id]}
+                onAction={handleAction}
+                onDismiss={handleDismiss}
+              />
+            </div>
           )}
 
-          {/* Rest of cards */}
-          <AnimatePresence mode="popLayout">
-            {restCards.map((card, i) => (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97, y: -8 }}
-                transition={{ delay: i * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-              >
-                <DigestCardItem
-                  card={card}
-                  profile={profile}
-                  action={actions[card.id]}
-                  isExpanded={expandedCards.has(card.id)}
-                  cachedDeeperText={deeperCache[card.id]}
-                  onAction={handleAction}
-                  onUndo={handleUndo}
-                  onToggleExpand={handleToggleExpand}
-                  onDeeperLoaded={handleDeeperLoaded}
-                  onSwipeDismiss={handleSwipeDismiss}
-                  onDismiss={handleDismiss}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {/* Rest of cards — tighter rhythm, secondary priority */}
+          {restCards.length > 0 && (
+            <div className="space-y-4">
+              {heroCard && (
+                <p className="text-label text-drift-text-tertiary px-0.5">More in your feed</p>
+              )}
+              <AnimatePresence mode="popLayout">
+                {restCards.map((card, i) => (
+                  <motion.div
+                    key={card.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.97, y: -8 }}
+                    transition={{ delay: i * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                    <DigestCardItem
+                      card={card}
+                      profile={profile}
+                      action={actions[card.id]}
+                      isExpanded={expandedCards.has(card.id)}
+                      cachedDeeperText={deeperCache[card.id]}
+                      onAction={handleAction}
+                      onUndo={handleUndo}
+                      onToggleExpand={handleToggleExpand}
+                      onDeeperLoaded={handleDeeperLoaded}
+                      onSwipeDismiss={handleSwipeDismiss}
+                      onDismiss={handleDismiss}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
 

@@ -91,9 +91,9 @@ function AskPageContent() {
   const historyCount = history.length
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <h1 className="text-h1 text-drift-text-primary leading-none">Ask Drift</h1>
         <p className="text-body-sm text-drift-text-tertiary mt-2">
           Ask anything — should I learn X, is Y worth it, when should I use Z?
@@ -140,7 +140,7 @@ function StreamingCard({ text, error, onRetry }: {
   return (
     <DriftCard className="relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent animate-pulse" />
-      <div className="px-6 pt-6 pb-5 space-y-4">
+      <div className="px-5 pt-5 pb-5 space-y-4">
         <div className="flex items-center gap-2.5">
           {error ? (
             <span className="text-body-sm text-red-400">Failed to get verdict</span>
@@ -181,7 +181,7 @@ function VerdictCard({ verdict }: { verdict: Verdict }) {
   return (
     <DriftCard className="relative overflow-hidden">
       <div className={cn('absolute top-0 left-0 right-0 h-[2px]', config.accent)} />
-      <div className="px-6 pt-6 pb-5 space-y-5">
+      <div className="px-5 pt-5 pb-5 space-y-4">
         {/* Query label */}
         <p className="text-body-sm text-drift-text-tertiary">{verdict.query}</p>
 
@@ -423,7 +423,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
   const showStreamingCard = !currentVerdict && (isStreaming || parseError || !!streamError)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Input bar */}
       <motion.div
         animate={{
@@ -615,7 +615,7 @@ function HistoryVerdictCard({ item, onRemove }: {
 
       {/* Collapsed header — always visible */}
       <div
-        className="px-6 pt-5 pb-4 flex items-center gap-3 cursor-pointer"
+        className="px-5 pt-5 pb-4 flex items-center gap-3 cursor-pointer"
         onClick={() => setExpanded(p => !p)}
       >
         <span className={cn(
@@ -648,7 +648,7 @@ function HistoryVerdictCard({ item, onRemove }: {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-5 space-y-4 border-t border-white/[0.05] pt-4">
+            <div className="px-5 pb-5 space-y-4 border-t border-white/[0.05] pt-4">
               {/* Meta */}
               <p className="text-body-sm text-drift-text-tertiary">
                 {date} · {followUpCount > 0

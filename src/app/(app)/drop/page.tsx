@@ -172,9 +172,9 @@ export default function DropPage() {
   const hasScores = scores.size > 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <h1 className="text-h1 text-drift-text-primary leading-none">Drop</h1>
         <p className="text-body-sm text-drift-text-tertiary mt-1.5">
           Your personal link library.
@@ -182,69 +182,72 @@ export default function DropPage() {
         <div className="mt-4 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
       </div>
 
-      {/* Context bar */}
-      <ContextBar value={context} onChange={setContext} />
+      {/* Controls zone — tighter grouping */}
+      <div className="space-y-3">
+        {/* Context bar */}
+        <ContextBar value={context} onChange={setContext} />
 
-      {/* URL input */}
-      <motion.div
-        animate={{
-          boxShadow: isSaving
-            ? '0 0 0 1px rgba(77,217,192,0.4), 0 0 24px rgba(77,217,192,0.10)'
-            : '0 0 0 1px rgba(255,255,255,0.06)',
-        }}
-        transition={{ duration: 0.2 }}
-        className="rounded-2xl bg-[#111827] overflow-hidden"
-      >
-        <div className={cn('flex items-center gap-3 px-4 py-3.5', isSaving && 'opacity-60 pointer-events-none')}>
-          <Link2 className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
-          <input
-            value={urlInput}
-            onChange={e => { setUrlInput(e.target.value); setUrlError('') }}
-            onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
-            placeholder="Paste a URL to save..."
-            className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
+        {/* URL input */}
+        <motion.div
+          animate={{
+            boxShadow: isSaving
+              ? '0 0 0 1px rgba(77,217,192,0.4), 0 0 24px rgba(77,217,192,0.10)'
+              : '0 0 0 1px rgba(255,255,255,0.06)',
+          }}
+          transition={{ duration: 0.2 }}
+          className="rounded-2xl bg-[#111827] overflow-hidden"
+        >
+          <div className={cn('flex items-center gap-3 px-4 py-3.5', isSaving && 'opacity-60 pointer-events-none')}>
+            <Link2 className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
+            <input
+              value={urlInput}
+              onChange={e => { setUrlInput(e.target.value); setUrlError('') }}
+              onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
+              placeholder="Paste a URL to save..."
+              className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
+            />
+            <AnimatePresence>
+              {urlInput.trim() && !isSaving && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={handleSubmit}
+                  className="flex items-center gap-1.5 text-label text-drift-accent px-3 py-1.5 rounded-lg bg-drift-accent/10 hover:bg-drift-accent/20 transition-colors duration-200 shrink-0"
+                >
+                  Save
+                  <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+          {urlError && (
+            <p className="px-4 pb-3 text-label text-red-400">{urlError}</p>
+          )}
+        </motion.div>
+
+        {/* Type filter */}
+        {allTypes.length > 0 && (
+          <TagFilter
+            tags={allTypes}
+            active={activeTypes}
+            onToggle={toggleType}
+            onClear={() => setActiveTypes([])}
           />
-          <AnimatePresence>
-            {urlInput.trim() && !isSaving && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={handleSubmit}
-                className="flex items-center gap-1.5 text-label text-drift-accent px-3 py-1.5 rounded-lg bg-drift-accent/10 hover:bg-drift-accent/20 transition-colors duration-200 shrink-0"
-              >
-                Save
-                <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-        {urlError && (
-          <p className="px-4 pb-3 text-label text-red-400">{urlError}</p>
         )}
-      </motion.div>
 
-      {/* Type filter */}
-      {allTypes.length > 0 && (
-        <TagFilter
-          tags={allTypes}
-          active={activeTypes}
-          onToggle={toggleType}
-          onClear={() => setActiveTypes([])}
-        />
-      )}
-
-      {/* Expiry nudge */}
-      {expiringIds.size > 0 && (
-        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
-          <span className="text-label text-amber-400">
-            {expiringIds.size === 1
-              ? '1 link expires within 24 hours'
-              : `${expiringIds.size} links expire within 24 hours`}
-            {' — '}bookmark to keep them.
-          </span>
-        </div>
-      )}
+        {/* Expiry nudge */}
+        {expiringIds.size > 0 && (
+          <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
+            <span className="text-label text-amber-400">
+              {expiringIds.size === 1
+                ? '1 link expires within 24 hours'
+                : `${expiringIds.size} links expire within 24 hours`}
+              {' — '}bookmark to keep them.
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Skeleton while saving */}
       <AnimatePresence>
@@ -283,10 +286,10 @@ export default function DropPage() {
           )}
         </motion.div>
       ) : (
-        <>
+        <div className="space-y-6">
           {/* Relevant section */}
           {hasScores && relevant.length > 0 && (
-            <section className="space-y-4">
+            <section className="space-y-3">
               <p className="text-label text-drift-text-tertiary px-0.5">Relevant to you now</p>
               <AnimatePresence mode="popLayout">
                 {relevant.map(link => (
@@ -304,9 +307,9 @@ export default function DropPage() {
 
           {/* Other / all links */}
           {(other.length > 0 || !hasScores) && (
-            <section className="space-y-4">
+            <section className="space-y-3">
               {hasScores && relevant.length > 0 && other.length > 0 && (
-                <p className="text-label text-drift-text-tertiary px-0.5 pt-2">Other saved</p>
+                <p className="text-label text-drift-text-tertiary px-0.5">Other saved</p>
               )}
               <AnimatePresence mode="popLayout">
                 {(hasScores ? other : filtered).map(link => (
@@ -321,7 +324,7 @@ export default function DropPage() {
               </AnimatePresence>
             </section>
           )}
-        </>
+        </div>
       )}
 
     </div>
