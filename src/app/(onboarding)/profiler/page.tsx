@@ -165,7 +165,7 @@ export default function ProfilerPage() {
                   className="h-full rounded-full bg-gradient-to-r from-drift-accent-muted to-drift-accent"
                   initial={{ width: '0%' }}
                   animate={{
-                    width: i < currentQ ? '100%' : i === currentQ ? '50%' : '0%',
+                    width: i < currentQ ? '100%' : '0%',
                   }}
                   transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
                 />

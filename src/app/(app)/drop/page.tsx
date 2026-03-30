@@ -286,7 +286,7 @@ export default function DropPage() {
         <>
           {/* Relevant section */}
           {hasScores && relevant.length > 0 && (
-            <section className="space-y-2">
+            <section className="space-y-4">
               <p className="text-label text-drift-text-tertiary px-0.5">Relevant to you now</p>
               <AnimatePresence mode="popLayout">
                 {relevant.map(link => (
@@ -304,7 +304,7 @@ export default function DropPage() {
 
           {/* Other / all links */}
           {(other.length > 0 || !hasScores) && (
-            <section className="space-y-2">
+            <section className="space-y-4">
               {hasScores && relevant.length > 0 && other.length > 0 && (
                 <p className="text-label text-drift-text-tertiary px-0.5 pt-2">Other saved</p>
               )}

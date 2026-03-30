@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import type { PanInfo } from 'framer-motion'
 import {
   Bookmark, Eye, RotateCcw, ChevronDown, ExternalLink,
-  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library, ArrowRight, Pencil
+  Zap, BookOpen, Play, GitBranch, Lightbulb, RefreshCw, Library, ArrowRight, Pencil, X
 } from 'lucide-react'
 import type { DriftProfile } from '@/types/profile'
 import type { DigestCard, CardAction } from '@/types/digest'
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 const CACHE_KEY = 'drift_digest_v2'
 const DEEPER_CACHE_KEY = 'drift_deeper_cache'
 const ACTIONS_SESSION_KEY = 'drift_digest_actions'
+const DISMISSED_KEY = 'drift_dismissed_ids'
 
 const CARD_TYPE_CONFIG = {
   tool_release: {
@@ -93,6 +94,29 @@ function saveDigestToCache(cards: DigestCard[]) {
   } catch { /* ignore */ }
 }
 
+// Use source_url or title as a stable key — AI regenerates IDs on each fetch
+function cardStableKey(card: DigestCard): string {
+  return card.source_url || card.title
+}
+
+function loadDismissedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY)
+    if (!raw) return new Set()
+    return new Set(JSON.parse(raw) as string[])
+  } catch {
+    return new Set()
+  }
+}
+
+function persistDismissedId(key: string) {
+  try {
+    const existing = loadDismissedIds()
+    existing.add(key)
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify([...existing]))
+  } catch { /* ignore */ }
+}
+
 function computeShiftBanner(current: DigestCard[], previous: DigestCard[]): string | null {
   const prevTitles = new Set(previous.map(c => c.title.toLowerCase()))
   const newCount = current.filter(c => !prevTitles.has(c.title.toLowerCase())).length
@@ -130,10 +154,11 @@ function CardSkeleton() {
 
 // ─── Hero Card — Today's One Thing ────────────────────────────────────────────
 
-function HeroCard({ card, action, onAction }: {
+function HeroCard({ card, action, onAction, onDismiss }: {
   card: DigestCard
   action?: CardAction
   onAction: (id: string, action: CardAction) => void
+  onDismiss: (id: string) => void
 }) {
   const config = CARD_TYPE_CONFIG[card.card_type] ?? CARD_TYPE_CONFIG.article
   const Icon = config.icon
@@ -191,7 +216,7 @@ function HeroCard({ card, action, onAction }: {
                 <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
               <button
-                onClick={() => { handleSaveToLinks(); onAction(card.id, 'save') }}
+                onClick={() => onAction(card.id, 'save')}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-white/[0.08] hover:text-drift-text-secondary transition-all duration-200"
               >
                 <Bookmark className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -208,6 +233,13 @@ function HeroCard({ card, action, onAction }: {
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
+              <button
+                onClick={() => onDismiss(card.id)}
+                title="Dismiss"
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </motion.div>
@@ -229,6 +261,7 @@ function DigestCardItem({
   onToggleExpand,
   onDeeperLoaded,
   onSwipeDismiss,
+  onDismiss,
 }: {
   card: DigestCard
   profile: DriftProfile
@@ -240,6 +273,7 @@ function DigestCardItem({
   onToggleExpand: (id: string) => void
   onDeeperLoaded: (id: string, text: string) => void
   onSwipeDismiss: (id: string) => void
+  onDismiss: (id: string) => void
 }) {
   const config = CARD_TYPE_CONFIG[card.card_type] ?? CARD_TYPE_CONFIG.article
   const Icon = config.icon
@@ -376,7 +410,7 @@ function DigestCardItem({
           <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
             <div className={cn('flex items-center gap-2 flex-1', isRead && 'pointer-events-none')}>
               <button
-                onClick={() => { onAction(card.id, 'save'); handleSaveToLinks() }}
+                onClick={() => isSaved ? onUndo(card.id) : onAction(card.id, 'save')}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm transition-all duration-200 border',
                   isSaved
@@ -429,6 +463,15 @@ function DigestCardItem({
               )}
             </div>
 
+            {!isActioned && (
+              <button
+                onClick={() => onDismiss(card.id)}
+                title="Dismiss"
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
             {isRead ? (
               <button
                 onClick={() => onUndo(card.id)}
@@ -438,13 +481,15 @@ function DigestCardItem({
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <button
-                onClick={() => onAction(card.id, 'read')}
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 transition-all duration-200"
-                title="Mark as read"
-              >
-                <Eye className="w-3.5 h-3.5" />
-              </button>
+              !isActioned && (
+                <button
+                  onClick={() => onAction(card.id, 'read')}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-body-sm bg-white/[0.04] text-drift-text-tertiary border border-white/[0.07] hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 transition-all duration-200"
+                  title="Mark as read"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+              )
             )}
           </div>
 
@@ -488,6 +533,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
   const [shiftBanner, setShiftBanner] = useState<string | null>(null)
   const [rerankLabel, setRerankLabel] = useState<string | null>(null)
   const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set())
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [isEditingContext, setIsEditingContext] = useState(false)
   const [contextDraft, setContextDraft] = useState(profile.currentContext)
 
@@ -501,6 +547,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
   useEffect(() => {
     const { today } = loadDigestCache()
     if (today) setCards(today)
+    setDismissedIds(loadDismissedIds())
     try {
       const cachedActions = sessionStorage.getItem(ACTIONS_SESSION_KEY)
       if (cachedActions) setActions(JSON.parse(cachedActions) as Record<string, CardAction>)
@@ -520,7 +567,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
 
   const isDone = cards.length > 0 && cards.every(c => {
     const a = actions[c.id]
-    return a === 'save' || a === 'read'
+    return a === 'save' || a === 'read' || dismissedIds.has(cardStableKey(c))
   })
 
   const fetchDigest = useCallback(async () => {
@@ -540,7 +587,8 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
       })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json() as { cards: DigestCard[] }
-      const fetched = data.cards ?? []
+      const dismissed = loadDismissedIds()
+      const fetched = (data.cards ?? []).filter(c => !dismissed.has(cardStableKey(c)))
       setCards(fetched)
       // What shifted banner
       const { yesterday } = loadDigestCache()
@@ -587,6 +635,14 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
     setSwipedIds(prev => new Set([...prev, id]))
   }, [])
 
+  const handleDismiss = useCallback((id: string) => {
+    const card = cards.find(c => c.id === id)
+    if (!card) return
+    const key = cardStableKey(card)
+    persistDismissedId(key)
+    setDismissedIds(prev => new Set([...prev, key]))
+  }, [cards])
+
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev)
@@ -597,10 +653,11 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
   }, [])
 
   // Hero card — highest relevance_score card
-  const heroCard = cards.length > 0 && !swipedIds.has(cards.reduce((a, b) => a.relevance_score >= b.relevance_score ? a : b).id)
-    ? cards.reduce((a, b) => a.relevance_score >= b.relevance_score ? a : b)
+  const visibleCards = cards.filter(c => !swipedIds.has(c.id) && !dismissedIds.has(cardStableKey(c)))
+  const heroCard = visibleCards.length > 0
+    ? visibleCards.reduce((a, b) => a.relevance_score >= b.relevance_score ? a : b)
     : null
-  const restCards = cards.filter(c => c.id !== heroCard?.id && !swipedIds.has(c.id))
+  const restCards = visibleCards.filter(c => c.id !== heroCard?.id)
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -753,6 +810,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
               card={heroCard}
               action={actions[heroCard.id]}
               onAction={handleAction}
+              onDismiss={handleDismiss}
             />
           )}
 
@@ -763,6 +821,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
                 key={card.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97, y: -8 }}
                 transition={{ delay: i * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 <DigestCardItem
@@ -776,6 +835,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
                   onToggleExpand={handleToggleExpand}
                   onDeeperLoaded={handleDeeperLoaded}
                   onSwipeDismiss={handleSwipeDismiss}
+                  onDismiss={handleDismiss}
                 />
               </motion.div>
             ))}

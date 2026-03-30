@@ -39,6 +39,13 @@
   --color-border-strong:   rgba(77, 217, 192, 0.20);
   --color-border-accent:   rgba(77, 217, 192, 0.40);
 
+  /* Card — warm parchment palette */
+  --color-card-warm-bg:      #8A7462;
+  --color-card-warm-border:  #9E8B79;
+  --color-card-warm-accent:  #F5D89A;
+  --color-card-warm-title:   #3A3028;
+  --color-card-warm-body:    #FFFFF;
+
   /* Fonts */
   --font-heading: var(--font-sora), sans-serif;
   --font-body:    var(--font-plus-jakarta), sans-serif;
@@ -94,6 +101,13 @@
   --color-drift-text-secondary: var(--color-text-secondary);
   --color-drift-text-tertiary: var(--color-text-tertiary);
   --color-drift-text-inverse:  var(--color-text-inverse);
+
+  /* Card warm palette */
+  --color-drift-card-warm-bg:     var(--color-card-warm-bg);
+  --color-drift-card-warm-border: var(--color-card-warm-border);
+  --color-drift-card-warm-accent: var(--color-card-warm-accent);
+  --color-drift-card-warm-title:  var(--color-card-warm-title);
+  --color-drift-card-warm-body:   var(--color-card-warm-body);
 
   /* shadcn tokens */
   --color-background: hsl(var(--background));
