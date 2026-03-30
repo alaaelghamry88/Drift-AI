@@ -44,16 +44,19 @@ const VERDICT_CONFIG = {
     label: 'YES',
     accent: 'bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent',
     pillClass: 'text-drift-accent bg-drift-accent/[0.12] border-drift-accent/30',
+    confidenceClass: 'text-drift-accent/60',
   },
   NOT_YET: {
     label: 'NOT YET',
     accent: 'bg-gradient-to-r from-amber-400/70 via-amber-400/20 to-transparent',
     pillClass: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
+    confidenceClass: 'text-amber-400/60',
   },
   SKIP: {
     label: 'SKIP',
     accent: 'bg-gradient-to-r from-white/20 via-white/5 to-transparent',
     pillClass: 'text-white/40 bg-white/[0.05] border-white/[0.10]',
+    confidenceClass: 'text-drift-text-tertiary',
   },
 } as const
 
@@ -193,7 +196,7 @@ function VerdictCard({ verdict }: { verdict: Verdict }) {
           )}>
             {config.label}
           </span>
-          <span className="text-body-sm text-drift-text-tertiary">
+          <span className={cn('text-body-sm', config.confidenceClass)}>
             {verdict.confidence} confidence
           </span>
         </div>

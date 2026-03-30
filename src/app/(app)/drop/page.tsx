@@ -290,7 +290,7 @@ export default function DropPage() {
           {/* Relevant section */}
           {hasScores && relevant.length > 0 && (
             <section className="space-y-3">
-              <p className="text-label text-drift-text-tertiary px-0.5">Relevant to you now</p>
+              <p className="text-label text-drift-accent/60 px-0.5">Relevant to you now</p>
               <AnimatePresence mode="popLayout">
                 {relevant.map(link => (
                   <LinkCard

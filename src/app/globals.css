@@ -40,11 +40,11 @@
   --color-border-accent:   rgba(77, 217, 192, 0.40);
 
   /* Card — warm parchment palette */
-  --color-card-warm-bg:      #8A7462;
-  --color-card-warm-border:  #9E8B79;
-  --color-card-warm-accent:  #F5D89A;
-  --color-card-warm-title:   #3A3028;
-  --color-card-warm-body:    #FFFFF;
+  --color-card-warm-bg:      #F0E6D3;
+  --color-card-warm-border:  #D5C4A8;
+  --color-card-warm-accent:  #96600E;
+  --color-card-warm-title:   #1C1510;
+  --color-card-warm-body:    #4A3C2C;
 
   /* Fonts */
   --font-heading: var(--font-sora), sans-serif;

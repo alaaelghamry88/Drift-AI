@@ -28,6 +28,7 @@ const CARD_TYPE_CONFIG = {
     color: 'text-amber-400',
     bg: 'bg-amber-400/10 border-amber-400/25',
     topAccent: 'bg-gradient-to-r from-amber-400/70 via-amber-400/20 to-transparent',
+    whyBg: 'bg-amber-400/[0.06] border-amber-400/[0.14]',
   },
   article: {
     icon: BookOpen,
@@ -35,6 +36,7 @@ const CARD_TYPE_CONFIG = {
     color: 'text-drift-accent',
     bg: 'bg-drift-accent/10 border-drift-accent/25',
     topAccent: 'bg-gradient-to-r from-drift-accent/70 via-drift-accent/20 to-transparent',
+    whyBg: 'bg-drift-accent/[0.06] border-drift-accent/[0.14]',
   },
   video: {
     icon: Play,
@@ -42,6 +44,7 @@ const CARD_TYPE_CONFIG = {
     color: 'text-violet-400',
     bg: 'bg-violet-400/10 border-violet-400/25',
     topAccent: 'bg-gradient-to-r from-violet-400/70 via-violet-400/20 to-transparent',
+    whyBg: 'bg-violet-400/[0.06] border-violet-400/[0.14]',
   },
   repo: {
     icon: GitBranch,
@@ -49,6 +52,7 @@ const CARD_TYPE_CONFIG = {
     color: 'text-sky-400',
     bg: 'bg-sky-400/10 border-sky-400/25',
     topAccent: 'bg-gradient-to-r from-sky-400/70 via-sky-400/20 to-transparent',
+    whyBg: 'bg-sky-400/[0.06] border-sky-400/[0.14]',
   },
   skill: {
     icon: Lightbulb,
@@ -56,6 +60,7 @@ const CARD_TYPE_CONFIG = {
     color: 'text-amber-400',
     bg: 'bg-amber-400/10 border-amber-400/25',
     topAccent: 'bg-gradient-to-r from-amber-400/70 via-amber-400/20 to-transparent',
+    whyBg: 'bg-amber-400/[0.06] border-amber-400/[0.14]',
   },
 }
 
@@ -371,7 +376,7 @@ function DigestCardItem({
           <p className="text-body text-drift-text-secondary leading-relaxed">{card.summary}</p>
 
           {/* Why it matters */}
-          <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+          <div className={cn('flex items-start gap-2.5 px-3.5 py-3 rounded-xl border', config.whyBg)}>
             <span className={cn('shrink-0 mt-[3px] text-[9px] leading-none', config.color)}>◈</span>
             <p className="text-body-sm text-drift-text-secondary/75 leading-relaxed">{card.relevance_reason}</p>
           </div>

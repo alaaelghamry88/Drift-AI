@@ -13,6 +13,14 @@ const TYPE_GLYPH: Record<string, string> = {
   other:   '◈',
 }
 
+const TYPE_GLYPH_COLOR: Record<string, string> = {
+  video:   'text-violet-600/80',
+  repo:    'text-sky-700/80',
+  tweet:   'text-sky-600/80',
+  article: 'text-amber-800/70',
+  other:   'text-drift-card-warm-body/50',
+}
+
 function formatAge(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
@@ -65,7 +73,7 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
               onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           ) : (
-            <span className="text-xs text-drift-card-warm-body/60">
+            <span className={cn('text-xs', TYPE_GLYPH_COLOR[link.type] ?? 'text-drift-card-warm-body/60')}>
               {TYPE_GLYPH[link.type] ?? '◈'}
             </span>
           )}

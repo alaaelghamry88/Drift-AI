@@ -142,9 +142,9 @@ function ProfilePageContent() {
   if (!profile) return null
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <h1 className="text-h1 text-drift-text-primary leading-none">Profile</h1>
         <p className="text-body-sm text-drift-text-tertiary mt-2">
           Your Drift context — how we filter everything for you.
@@ -181,7 +181,7 @@ function ProfilePageContent() {
               {profile.stack.map(tag => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-2.5 py-1 rounded-lg text-body border bg-white/[0.04] border-white/[0.08] text-drift-text-secondary"
+                  className="inline-flex items-center px-2.5 py-1 rounded-lg text-body border bg-drift-accent/[0.05] border-drift-accent/[0.14] text-drift-text-secondary"
                 >
                   {tag}
                 </span>
@@ -269,15 +269,15 @@ function ProfilePageContent() {
           <p className="text-label text-drift-text-tertiary uppercase tracking-wide mb-3">This week</p>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.linksSaved}</p>
+              <p className="text-h2 text-drift-accent font-semibold leading-none">{weeklyStats.linksSaved}</p>
               <p className="text-label text-drift-text-tertiary mt-1">saved</p>
             </div>
             <div className="text-center border-x border-white/[0.06]">
-              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.linksTriaged}</p>
+              <p className="text-h2 text-amber-400 font-semibold leading-none">{weeklyStats.linksTriaged}</p>
               <p className="text-label text-drift-text-tertiary mt-1">triaged</p>
             </div>
             <div className="text-center">
-              <p className="text-h2 text-drift-text-primary font-semibold leading-none">{weeklyStats.verdictsMade}</p>
+              <p className="text-h2 text-violet-400 font-semibold leading-none">{weeklyStats.verdictsMade}</p>
               <p className="text-label text-drift-text-tertiary mt-1">verdicts</p>
             </div>
           </div>
