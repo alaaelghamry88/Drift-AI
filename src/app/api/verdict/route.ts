@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, VERDICT_MODEL } from '@/lib/ai'
 import { verdictSystemPrompt, followUpSystemPrompt } from '@/lib/prompts'
 import type { DriftProfile } from '@/types/profile'
 
@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
   const messages = prevMessages || [{ role: 'user' as const, content: query }]
   const isFollowUp = messages.length > 1
 
-  const stream = await groq.chat.completions.create({
-    model: MODEL,
+  const stream = await openrouter.chat.completions.create({
+    model: VERDICT_MODEL,
     max_tokens: isFollowUp ? 512 : 2048,
     messages: [
       { role: 'system', content: isFollowUp ? followUpSystemPrompt(profile) : verdictSystemPrompt(profile) },
