@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, DIGEST_MODEL } from '@/lib/ai'
 import { linkScoringPrompt } from '@/lib/prompts'
 
 interface ScoreRequestBody {
@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json([])
     }
 
-    const completion = await groq.chat.completions.create({
-      model: MODEL,
+    const completion = await openrouter.chat.completions.create({
+      model: DIGEST_MODEL,
       messages: [{ role: 'user', content: linkScoringPrompt(context, links) }],
       response_format: { type: 'json_object' },
       max_tokens: 512,

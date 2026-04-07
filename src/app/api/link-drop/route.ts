@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, DIGEST_MODEL } from '@/lib/ai'
 import { linkAssessmentSystemPrompt } from '@/lib/prompts'
 import { stripHtml } from '@/lib/html-strip'
 import type { DriftProfile } from '@/types/profile'
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     ? `Assess this URL for me: ${url}\n\n(Content could not be retrieved.)`
     : `Assess this URL for me: ${url}\n\nCONTENT:\n${content}`
 
-  const stream = await groq.chat.completions.create({
-    model: MODEL,
+  const stream = await openrouter.chat.completions.create({
+    model: DIGEST_MODEL,
     max_tokens: 2048,
     messages: [
       { role: 'system', content: linkAssessmentSystemPrompt(profile) },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, DIGEST_MODEL } from '@/lib/ai'
 import { workflowAssessmentSystemPrompt } from '@/lib/prompts'
 import type { DriftProfile } from '@/types/profile'
 
@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
   try {
     const { profile } = await req.json() as { profile: DriftProfile }
 
-    const response = await groq.chat.completions.create({
-      model: MODEL,
+    const response = await openrouter.chat.completions.create({
+      model: DIGEST_MODEL,
       max_tokens: 2048,
       messages: [
         { role: 'system', content: workflowAssessmentSystemPrompt(profile) },
