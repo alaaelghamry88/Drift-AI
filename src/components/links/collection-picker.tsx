@@ -46,8 +46,8 @@ export function CollectionPicker({
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-label border transition-all duration-200',
             selected.includes(col.id)
-              ? 'bg-drift-accent/15 border-drift-accent/40 text-drift-accent'
-              : 'bg-white/[0.04] border-white/[0.07] text-drift-text-tertiary hover:text-drift-text-secondary'
+              ? 'bg-drift-accent/15 border-drift-accent/40 text-drift-card-warm-accent'
+              : 'bg-drift-card-warm-border/30 border-drift-card-warm-border text-drift-card-warm-body hover:text-drift-card-warm-title'
           )}
         >
           <span>{col.emoji}</span>
@@ -60,7 +60,7 @@ export function CollectionPicker({
           <input
             value={emoji}
             onChange={e => setEmoji(e.target.value)}
-            className="w-6 bg-transparent text-center outline-none text-body"
+            className="w-6 bg-transparent text-center outline-none text-drift-card-warm-title"
             maxLength={2}
           />
           <input
@@ -72,16 +72,16 @@ export function CollectionPicker({
               if (e.key === 'Escape') setCreating(false)
             }}
             placeholder="Name"
-            className="bg-transparent text-label text-drift-text-primary outline-none placeholder:text-drift-text-tertiary w-24"
+            className="bg-transparent text-label text-drift-card-warm-title outline-none placeholder:text-drift-card-warm-body/50 w-24"
           />
-          <button onClick={handleCreate} className="text-label text-drift-accent font-medium">
+          <button onClick={handleCreate} className="text-label text-drift-card-warm-accent font-medium">
             Add
           </button>
         </div>
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="px-3 py-1.5 rounded-xl text-label border border-dashed border-white/[0.08] text-drift-text-tertiary hover:text-drift-text-secondary transition-all duration-200"
+          className="px-3 py-1.5 rounded-xl text-label border border-dashed border-drift-card-warm-border text-drift-card-warm-body/60 hover:text-drift-card-warm-body transition-all duration-200"
         >
           + New
         </button>
