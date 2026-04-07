@@ -31,26 +31,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="drift-bg min-h-screen">
       <header className="relative z-10 mx-auto max-w-[680px] px-4 md:px-6 pt-6 pb-4">
-        <div className="flex items-baseline justify-center gap-2 select-none">
+        <div className="flex items-center justify-center gap-2 select-none">
+          <div className="flex items-baseline gap-2">
+            <span
+              className="text-drift-accent"
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '1.25rem',
+                lineHeight: 1,
+                animationName: 'drift-glow-breathe',
+                animationDuration: '3.5s',
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+              }}
+            >
+              ∿
+            </span>
+            <span
+              className="text-drift-text-primary"
+              style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.04em' }}
+            >
+              Drift
+            </span>
+          </div>
           <span
-            className="text-drift-accent"
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '1.25rem',
-              lineHeight: 1,
-              animationName: 'drift-glow-breathe',
-              animationDuration: '3.5s',
-              animationTimingFunction: 'ease-in-out',
-              animationIterationCount: 'infinite',
-            }}
+            title="Early access — more features coming soon"
+            className="px-1.5 py-0.5 rounded-md text-[10px] font-medium tracking-wide uppercase border border-drift-accent/20 text-drift-accent/60 bg-drift-accent/5"
           >
-            ∿
-          </span>
-          <span
-            className="text-drift-text-primary"
-            style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.04em' }}
-          >
-            Drift
+            beta
           </span>
         </div>
       </header>
