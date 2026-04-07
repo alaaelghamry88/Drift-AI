@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, DIGEST_MODEL } from '@/lib/ai'
 import { digestSystemPrompt, digestUserPrompt } from '@/lib/prompts'
 import { fetchAINews } from '@/lib/tavily'
 import type { DriftProfile } from '@/types/profile'
@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
       console.warn('Tavily returned no results — falling back to LLM-only digest')
     }
 
-    const response = await groq.chat.completions.create({
-      model: MODEL,
+    const response = await openrouter.chat.completions.create({
+      model: DIGEST_MODEL,
       max_tokens: 2048,
       messages: [
         { role: 'system', content: digestSystemPrompt(profile) },
