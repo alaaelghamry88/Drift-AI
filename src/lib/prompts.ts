@@ -212,6 +212,47 @@ Rules:
 - Return ONLY the JSON object, no markdown fences`
 }
 
+export function linkClusterPrompt(
+  links: Array<{ id: string; title: string; summary: string }>
+): string {
+  const list = links
+    .map((l, i) => `${i + 1}. [${l.id}] ${l.title} — ${l.summary}`)
+    .join('\n')
+  return `You are analysing a developer's saved link library to find thematic clusters.
+
+Links:
+${list}
+
+Find the strongest cluster of 3 or more links that share a common theme.
+
+Return a JSON object:
+{
+  "name": "<suggested collection name, 2-3 words, title case>",
+  "ids": ["<link id>", ...]
+}
+
+If no clear cluster of 3+ links exists, return:
+{ "name": null, "ids": [] }
+
+Return ONLY the JSON object, no markdown fences`
+}
+
+export function linkDigestHeadlinePrompt(
+  links: Array<{ title: string; summary: string }>
+): string {
+  const list = links
+    .map((l, i) => `${i + 1}. ${l.title} — ${l.summary}`)
+    .join('\n')
+  return `You are summarising a developer's weekly saved links in a single sentence.
+
+Links saved this week:
+${list}
+
+Write a single sentence (max 120 chars) describing the themes or topics they've been exploring. Be specific, not generic. No quotes around the sentence.
+
+Return ONLY the sentence, no markdown, no trailing period`
+}
+
 export function linkScoringPrompt(
   context: string,
   links: Array<{ id: string; title: string; summary: string }>

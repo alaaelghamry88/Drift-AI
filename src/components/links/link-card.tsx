@@ -1,9 +1,12 @@
 'use client'
 
-import { Check, Bookmark, Trash2 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { Check, Bookmark, Trash2, FolderPlus } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { SavedLink } from '@/types/saved-link'
+import type { Collection } from '@/types/collection'
+import { CollectionPicker } from '@/components/links/collection-picker'
 
 const TYPE_GLYPH: Record<string, string> = {
   video:   '▶',
@@ -32,14 +35,47 @@ function formatAge(iso: string): string {
 
 interface LinkCardProps {
   link: SavedLink
+  collections: Collection[]
+  isExpanded?: boolean
   onRead: () => void
   onKeep: () => void
   onRemove: () => void
+  onUpdateLink: (patch: Partial<Pick<SavedLink, 'note' | 'tags' | 'collectionIds'>>) => void
+  onCollectionCreated: (col: Collection) => void
 }
 
-export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
+export function LinkCard({
+  link,
+  collections,
+  isExpanded = false,
+  onRead,
+  onKeep,
+  onRemove,
+  onUpdateLink,
+  onCollectionCreated,
+}: LinkCardProps) {
   const isRead = link.status === 'read'
   const isKept = link.status === 'kept'
+  const [showAssign, setShowAssign] = useState(false)
+  const [note, setNote] = useState(link.note)
+
+  const primaryCollection = collections.find(c => link.collectionIds.includes(c.id))
+
+  const handleNoteBlur = () => {
+    if (note !== link.note) onUpdateLink({ note })
+  }
+
+  const handleCollectionToggle = (id: string) => {
+    const next = link.collectionIds.includes(id)
+      ? link.collectionIds.filter(c => c !== id)
+      : [...link.collectionIds, id]
+    onUpdateLink({ collectionIds: next })
+  }
+
+  const handleCollectionCreated = (col: Collection) => {
+    onCollectionCreated(col)
+    onUpdateLink({ collectionIds: [...link.collectionIds, col.id] })
+  }
 
   return (
     <motion.div
@@ -57,7 +93,6 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
           : 'border-drift-card-warm-border'
       )}
     >
-      {/* Warm accent left bar for kept */}
       {isKept && (
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-drift-card-warm-accent/80 via-drift-card-warm-accent/50 to-drift-card-warm-accent/20" />
       )}
@@ -82,7 +117,13 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
           </span>
           <span className="text-drift-card-warm-body/40 text-xs shrink-0">·</span>
           <span className="text-label text-drift-card-warm-body/60 shrink-0">{formatAge(link.savedAt)}</span>
-          {isKept && (
+
+          {primaryCollection && (
+            <span className="ml-auto text-[10px] font-medium text-drift-accent/80 bg-drift-accent/[0.08] border border-drift-accent/[0.15] px-1.5 py-0.5 rounded-md shrink-0">
+              {primaryCollection.emoji} {primaryCollection.name}
+            </span>
+          )}
+          {!primaryCollection && isKept && (
             <span className="ml-auto text-[10px] font-semibold tracking-widest uppercase text-drift-card-warm-accent/80">
               Saved
             </span>
@@ -105,6 +146,14 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
             >
               {link.title}
             </a>
+
+            {/* Note display (collapsed state) */}
+            {link.note && !isExpanded && !showAssign && (
+              <p className="text-label text-drift-card-warm-body/70 italic mb-1.5 pl-2.5 border-l-2 border-drift-accent/25">
+                {link.note}
+              </p>
+            )}
+
             {link.summary && (
               <p className="text-md text-drift-card-warm-body line-clamp-2 leading-relaxed font-normal">
                 {link.summary}
@@ -129,9 +178,61 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
           )}
         </div>
 
+        {/* Inline expand area */}
+        <AnimatePresence>
+          {(isExpanded || showAssign) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 pt-3 border-t border-drift-card-warm-border/60 space-y-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-drift-card-warm-body/40 mb-1.5">
+                    Note
+                  </p>
+                  <input
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                    onBlur={handleNoteBlur}
+                    placeholder="Why are you saving this?"
+                    className="w-full bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2 text-label text-drift-card-warm-body placeholder:text-drift-card-warm-body/30 outline-none focus:border-drift-accent/30 transition-colors duration-200"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-drift-card-warm-body/40 mb-1.5">
+                    Collection
+                  </p>
+                  <CollectionPicker
+                    selected={link.collectionIds}
+                    collections={collections}
+                    onToggle={handleCollectionToggle}
+                    onNew={handleCollectionCreated}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Actions row */}
         <div className="mt-3.5 pt-3 border-t border-drift-card-warm-border flex items-center justify-end gap-2">
-          {/* Read */}
+          <button
+            onClick={() => setShowAssign(v => !v)}
+            title="Add to collection"
+            className={cn(
+              'w-8 h-8 rounded-xl flex items-center justify-center border transition-all duration-200',
+              showAssign || link.collectionIds.length > 0
+                ? 'bg-drift-accent/15 border-drift-accent/40 text-drift-accent'
+                : 'bg-drift-card-warm-title/5 border-drift-card-warm-border text-drift-card-warm-body hover:bg-drift-accent/10 hover:border-drift-accent/30 hover:text-drift-accent'
+            )}
+          >
+            <FolderPlus className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+
           <button
             onClick={onRead}
             title="Mark as read"
@@ -145,7 +246,6 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
             <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
 
-          {/* Keep */}
           <button
             onClick={onKeep}
             title="Keep — won't auto-archive"
@@ -162,7 +262,6 @@ export function LinkCard({ link, onRead, onKeep, onRemove }: LinkCardProps) {
             />
           </button>
 
-          {/* Remove */}
           <button
             onClick={onRemove}
             title="Remove"

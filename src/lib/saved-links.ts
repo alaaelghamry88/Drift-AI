@@ -25,6 +25,13 @@ export function updateLinkStatus(id: string, status: SavedLink['status']): void 
   saveLinks(loadLinks().map(l => l.id === id ? { ...l, status } : l))
 }
 
+export function updateLink(
+  id: string,
+  patch: Partial<Pick<SavedLink, 'note' | 'tags' | 'collectionIds'>>
+): void {
+  saveLinks(loadLinks().map(l => l.id === id ? { ...l, ...patch } : l))
+}
+
 export function removeLink(id: string): void {
   saveLinks(loadLinks().filter(l => l.id !== id))
 }

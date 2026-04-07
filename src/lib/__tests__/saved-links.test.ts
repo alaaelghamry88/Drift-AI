@@ -11,6 +11,7 @@ vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid-1234' })
 import {
   loadLinks, saveLinks, addLink, updateLinkStatus,
   removeLink, archiveExpiredLinks, getActiveLinks, createSavedLink,
+  updateLink,
 } from '../saved-links'
 import type { SavedLink } from '@/types/saved-link'
 
@@ -134,5 +135,29 @@ describe('createSavedLink', () => {
     const WEEK = 7 * 24 * 60 * 60 * 1000
     expect(diff).toBeGreaterThanOrEqual(WEEK)
     expect(diff).toBeLessThan(WEEK + 100) // allow up to 100ms execution skew
+  })
+})
+
+describe('updateLink', () => {
+  it('updates note on matching link', () => {
+    saveLinks([mockLink])
+    updateLink('abc-123', { note: 'great resource' })
+    expect(loadLinks()[0].note).toBe('great resource')
+  })
+  it('updates collectionIds on matching link', () => {
+    saveLinks([mockLink])
+    updateLink('abc-123', { collectionIds: ['col-1', 'col-2'] })
+    expect(loadLinks()[0].collectionIds).toEqual(['col-1', 'col-2'])
+  })
+  it('updates tags on matching link', () => {
+    saveLinks([mockLink])
+    updateLink('abc-123', { tags: ['react', 'auth'] })
+    expect(loadLinks()[0].tags).toEqual(['react', 'auth'])
+  })
+  it('does not affect other links', () => {
+    const other = { ...mockLink, id: 'other-1' }
+    saveLinks([mockLink, other])
+    updateLink('abc-123', { note: 'changed' })
+    expect(loadLinks().find(l => l.id === 'other-1')?.note).toBe('')
   })
 })

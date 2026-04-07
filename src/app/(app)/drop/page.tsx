@@ -11,16 +11,25 @@ import {
   loadLinks,
   addLink,
   updateLinkStatus,
+  updateLink,
   removeLink,
   getActiveLinks,
   archiveExpiredLinks,
   createSavedLink,
 } from '@/lib/saved-links'
+import {
+  getCollections,
+  addCollection,
+} from '@/lib/saved-collections'
 import type { SavedLink } from '@/types/saved-link'
+import type { Collection } from '@/types/collection'
 import { logActivity } from '@/lib/activity-log'
 import { ContextBar } from '@/components/links/context-bar'
 import { TagFilter } from '@/components/links/tag-filter'
 import { LinkCard } from '@/components/links/link-card'
+import { CollectionBar } from '@/components/links/collection-bar'
+import { ClusterNudge } from '@/components/links/cluster-nudge'
+import { WeeklyDigestBanner } from '@/components/links/weekly-digest-banner'
 
 async function scoreLinks(
   context: string,
@@ -44,31 +53,64 @@ async function scoreLinks(
   }
 }
 
+async function fetchClusterSuggestion(
+  links: SavedLink[]
+): Promise<{ name: string; ids: string[] } | null> {
+  const uncollected = links.filter(l => l.collectionIds.length === 0)
+  if (uncollected.length < 3) return null
+  try {
+    const res = await fetch('/api/links/cluster', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        links: uncollected.map(l => ({ id: l.id, title: l.title, summary: l.summary })),
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { name: string | null; ids: string[] }
+    if (!data.name || data.ids.length < 3) return null
+    return { name: data.name, ids: data.ids }
+  } catch {
+    return null
+  }
+}
+
 export default function DropPage() {
   const { profile } = useProfile()
   const [links, setLinks] = useState<SavedLink[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
   const [scores, setScores] = useState<Map<string, number>>(new Map())
   const [context, setContext] = useState('')
   const [activeTypes, setActiveTypes] = useState<string[]>([])
+  const [activeCollection, setActiveCollection] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [scoringContext, setScoringContext] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [clusterSuggestion, setClusterSuggestion] = useState<{ name: string; ids: string[] } | null>(null)
+  const [clusterDismissed, setClusterDismissed] = useState(false)
 
-  // Load links and archive expired ones on mount
   useEffect(() => {
     archiveExpiredLinks()
     setLinks(getActiveLinks())
+    setCollections(getCollections())
   }, [])
 
-  // Initialise context from profile
   useEffect(() => {
     if (profile?.currentContext && !context) {
       setContext(profile.currentContext)
     }
   }, [profile, context])
 
-  // Re-score when context meaningfully changes (debounced)
+  // Auto-collapse expanded card after 8 seconds
+  useEffect(() => {
+    if (!expandedId) return
+    const timer = setTimeout(() => setExpandedId(null), 8000)
+    return () => clearTimeout(timer)
+  }, [expandedId])
+
+  // Re-score when context changes (debounced)
   useEffect(() => {
     if (!context || context === scoringContext) return
     const timer = setTimeout(async () => {
@@ -79,6 +121,18 @@ export default function DropPage() {
     }, 800)
     return () => clearTimeout(timer)
   }, [context, scoringContext])
+
+  // Run cluster check lazily after links settle
+  useEffect(() => {
+    if (clusterDismissed || clusterSuggestion) return
+    const active = getActiveLinks()
+    if (active.length < 3) return
+    const timer = setTimeout(async () => {
+      const suggestion = await fetchClusterSuggestion(active)
+      if (suggestion) setClusterSuggestion(suggestion)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [links, clusterDismissed, clusterSuggestion])
 
   const handleSave = useCallback(async (url: string) => {
     setIsSaving(true)
@@ -103,7 +157,7 @@ export default function DropPage() {
       addLink(link)
       logActivity('link_saved')
       setLinks(getActiveLinks())
-      // Score the new link immediately
+      setExpandedId(link.id)
       if (context) {
         const map = await scoreLinks(context, getActiveLinks())
         setScores(map)
@@ -139,7 +193,44 @@ export default function DropPage() {
     setLinks(getActiveLinks())
   }, [])
 
-  // All unique types from active links
+  const handleUpdateLink = useCallback((
+    id: string,
+    patch: Partial<Pick<SavedLink, 'note' | 'tags' | 'collectionIds'>>
+  ) => {
+    updateLink(id, patch)
+    setLinks(getActiveLinks())
+  }, [])
+
+  const handleCollectionCreated = useCallback((col: Collection) => {
+    addCollection(col)
+    setCollections(getCollections())
+  }, [])
+
+  const handleNewCollection = useCallback((col: Collection) => {
+    addCollection(col)
+    setCollections(getCollections())
+    setActiveCollection(col.id)
+  }, [])
+
+  const handleAcceptCluster = useCallback((name: string, ids: string[]) => {
+    const col: Collection = {
+      id: crypto.randomUUID(),
+      name,
+      emoji: '✦',
+      createdAt: new Date().toISOString(),
+      source: 'ai-suggested',
+    }
+    addCollection(col)
+    const active = getActiveLinks()
+    ids.forEach(id => {
+      const link = active.find(l => l.id === id)
+      if (link) updateLink(id, { collectionIds: [...link.collectionIds, col.id] })
+    })
+    setCollections(getCollections())
+    setLinks(getActiveLinks())
+    setClusterSuggestion(null)
+  }, [])
+
   const allTypes = useMemo(
     () => Array.from(new Set(links.map(l => l.type))),
     [links]
@@ -152,14 +243,19 @@ export default function DropPage() {
   }
 
   const filtered = useMemo(() => {
-    if (activeTypes.length === 0) return links
-    return links.filter(l => activeTypes.includes(l.type))
-  }, [links, activeTypes])
+    let result = links
+    if (activeCollection) {
+      result = result.filter(l => l.collectionIds.includes(activeCollection))
+    }
+    if (activeTypes.length > 0) {
+      result = result.filter(l => activeTypes.includes(l.type))
+    }
+    return result
+  }, [links, activeCollection, activeTypes])
 
   const relevant = filtered.filter(l => (scores.get(l.id) ?? 0) >= 6)
   const other = filtered.filter(l => (scores.get(l.id) ?? 0) < 6)
 
-  // Links expiring within 24h (active, not kept)
   const expiringIds = useMemo(() => {
     const threshold = Date.now() + 24 * 60 * 60 * 1000
     return new Set(
@@ -173,7 +269,6 @@ export default function DropPage() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
       <div className="mb-8">
         <h1 className="text-h1 text-drift-text-primary leading-none">Drop</h1>
         <p className="text-body-sm text-drift-text-tertiary mt-1.5">
@@ -182,12 +277,9 @@ export default function DropPage() {
         <div className="mt-4 h-px bg-gradient-to-r from-drift-accent/30 via-white/[0.05] to-transparent" />
       </div>
 
-      {/* Controls zone — tighter grouping */}
       <div className="space-y-3">
-        {/* Context bar */}
         <ContextBar value={context} onChange={setContext} />
 
-        {/* URL input */}
         <motion.div
           animate={{
             boxShadow: isSaving
@@ -226,7 +318,15 @@ export default function DropPage() {
           )}
         </motion.div>
 
-        {/* Type filter */}
+        {(collections.length > 0 || links.length > 0) && (
+          <CollectionBar
+            collections={collections}
+            active={activeCollection}
+            onSelect={setActiveCollection}
+            onNew={handleNewCollection}
+          />
+        )}
+
         {allTypes.length > 0 && (
           <TagFilter
             tags={allTypes}
@@ -236,7 +336,6 @@ export default function DropPage() {
           />
         )}
 
-        {/* Expiry nudge */}
         {expiringIds.size > 0 && (
           <div className="flex items-center gap-2 px-3.5 py-2.5 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
             <span className="text-label text-amber-400">
@@ -247,9 +346,18 @@ export default function DropPage() {
             </span>
           </div>
         )}
+
+        <WeeklyDigestBanner links={links} collections={collections} />
+
+        {clusterSuggestion && !clusterDismissed && (
+          <ClusterNudge
+            suggestion={clusterSuggestion}
+            onAccept={handleAcceptCluster}
+            onDismiss={() => { setClusterDismissed(true); setClusterSuggestion(null) }}
+          />
+        )}
       </div>
 
-      {/* Skeleton while saving */}
       <AnimatePresence>
         {isSaving && (
           <motion.div
@@ -267,7 +375,6 @@ export default function DropPage() {
         )}
       </AnimatePresence>
 
-      {/* Link sections */}
       {filtered.length === 0 && !isSaving ? (
         <motion.div
           initial={{ opacity: 0 }}
@@ -287,7 +394,6 @@ export default function DropPage() {
         </motion.div>
       ) : (
         <div className="space-y-6">
-          {/* Relevant section */}
           {hasScores && relevant.length > 0 && (
             <section className="space-y-3">
               <p className="text-label text-drift-accent/60 px-0.5">Relevant to you now</p>
@@ -296,16 +402,19 @@ export default function DropPage() {
                   <LinkCard
                     key={link.id}
                     link={link}
+                    collections={collections}
+                    isExpanded={expandedId === link.id}
                     onRead={() => handleStatus(link.id, link.status === 'read' ? 'active' : 'read')}
                     onKeep={() => handleStatus(link.id, link.status === 'kept' ? 'active' : 'kept')}
                     onRemove={() => handleRemove(link.id)}
+                    onUpdateLink={patch => handleUpdateLink(link.id, patch)}
+                    onCollectionCreated={handleCollectionCreated}
                   />
                 ))}
               </AnimatePresence>
             </section>
           )}
 
-          {/* Other / all links */}
           {(other.length > 0 || !hasScores) && (
             <section className="space-y-3">
               {hasScores && relevant.length > 0 && other.length > 0 && (
@@ -316,9 +425,13 @@ export default function DropPage() {
                   <LinkCard
                     key={link.id}
                     link={link}
+                    collections={collections}
+                    isExpanded={expandedId === link.id}
                     onRead={() => handleStatus(link.id, link.status === 'read' ? 'active' : 'read')}
                     onKeep={() => handleStatus(link.id, link.status === 'kept' ? 'active' : 'kept')}
                     onRemove={() => handleRemove(link.id)}
+                    onUpdateLink={patch => handleUpdateLink(link.id, patch)}
+                    onCollectionCreated={handleCollectionCreated}
                   />
                 ))}
               </AnimatePresence>
@@ -326,7 +439,6 @@ export default function DropPage() {
           )}
         </div>
       )}
-
     </div>
   )
 }
