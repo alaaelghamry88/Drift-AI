@@ -75,7 +75,7 @@ A dedicated screen for answering the developer's most common question: *"Should 
 
 ### Drop — Link Library
 
-A personal link library for saving and triaging links, with AI-powered relevance scoring tied to your current work context.
+A personal link library for saving and triaging links, with AI-powered relevance scoring, collections, and a weekly digest tied to your current work context.
 
 - **URL input** — paste any link directly on the page to save it instantly
 - **Auto-metadata extraction** — title, summary, thumbnail, favicon, and content type detected automatically (video, article, repo, tweet)
@@ -83,8 +83,14 @@ A personal link library for saving and triaging links, with AI-powered relevance
 - **Relevance scoring** — Claude scores every link 0–10 against your current context and splits the list into:
   - **Relevant to you now** — links scoring 6 and above
   - **Other saved** — everything else
+- **Collections** — organize links into named, emoji-tagged buckets; switch between them via a horizontal pill bar; create new collections inline without leaving the page
+- **Save-time enrichment** — after a link saves, the card briefly expands to let you add a note ("why I saved this"), assign it to a collection, and edit its tags before collapsing automatically
+- **Notes** — each link can carry a personal annotation displayed as an italicised aside beneath the title
+- **AI clustering nudge** — Drift analyses your uncollected links and suggests a collection name when it detects 3+ thematically related links; one tap creates the collection and pre-assigns the matching links
+- **Weekly digest banner** — after 7+ links saved in a week, a recap banner appears at the top of Drop showing count, unread links, and active collections; tapping opens a full sheet with an AI-generated one-line summary of your week's themes and a per-collection breakdown
 - **Type filtering** — filter chips for video, article, repo, tweet, or view all
-- **Link lifecycle management** — three actions per link:
+- **Link lifecycle management** — four actions per link:
+  - **Assign** — add or remove the link from any collection
   - **Read** — marks it done (muted, strikethrough title)
   - **Keep** — pins it so it never auto-archives
   - **Remove** — deletes it permanently
