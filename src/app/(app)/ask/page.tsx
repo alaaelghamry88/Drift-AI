@@ -19,6 +19,26 @@ import type { SavedLink } from '@/types/saved-link'
 
 const HISTORY_KEY = 'drift_ask_history'
 const MAX_HISTORY = 50
+const ASK_COUNT_KEY = 'drift_ask_count'
+const MAX_ASKS = 10
+const MAX_FOLLOW_UPS = 5
+
+function loadAskCount(): number {
+  try {
+    return parseInt(localStorage.getItem(ASK_COUNT_KEY) ?? '0', 10) || 0
+  } catch {
+    return 0
+  }
+}
+
+function incrementAskCount(): void {
+  try {
+    const current = loadAskCount()
+    localStorage.setItem(ASK_COUNT_KEY, String(current + 1))
+  } catch {
+    // storage unavailable
+  }
+}
 
 function loadHistory(): StoredVerdict[] {
   try {
@@ -240,10 +260,12 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
 
   // Show only messages after the initial user + assistant exchange
   const threadMessages = messages.slice(2)
+  const followUpCount = Math.floor(threadMessages.length / 2)
+  const atFollowUpLimit = followUpCount >= MAX_FOLLOW_UPS
 
   const handleSend = () => {
     const trimmed = followUp.trim()
-    if (!trimmed || isStreaming) return
+    if (!trimmed || isStreaming || atFollowUpLimit) return
     setFollowUp('')
     onFollowUp(trimmed)
   }
@@ -298,26 +320,32 @@ function ConversationThread({ messages, isStreaming, streamText, onFollowUp }: {
       )}
 
       {/* Follow-up input */}
-      <div className={cn(
-        'flex items-center gap-3 px-5 py-3.5 rounded-xl bg-drift-surface border border-white/[0.08]',
-        isStreaming && 'opacity-60 pointer-events-none'
-      )}>
-        <input
-          value={followUp}
-          onChange={e => setFollowUp(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Follow up..."
-          disabled={isStreaming}
-          className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!followUp.trim() || isStreaming}
-          className="text-drift-text-tertiary hover:text-drift-accent disabled:opacity-30 transition-colors duration-200"
-        >
-          <Send className="w-4 h-4" strokeWidth={1.5} />
-        </button>
-      </div>
+      {atFollowUpLimit ? (
+        <div className="px-5 py-3.5 rounded-xl bg-drift-surface border border-white/[0.08] text-body-sm text-drift-text-tertiary text-center">
+          {MAX_FOLLOW_UPS}/{MAX_FOLLOW_UPS} follow-ups used
+        </div>
+      ) : (
+        <div className={cn(
+          'flex items-center gap-3 px-5 py-3.5 rounded-xl bg-drift-surface border border-white/[0.08]',
+          isStreaming && 'opacity-60 pointer-events-none'
+        )}>
+          <input
+            value={followUp}
+            onChange={e => setFollowUp(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Follow up..."
+            disabled={isStreaming}
+            className="flex-1 bg-transparent text-body text-drift-text-primary placeholder:text-drift-text-tertiary outline-none"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!followUp.trim() || isStreaming}
+            className="text-drift-text-tertiary hover:text-drift-accent disabled:opacity-30 transition-colors duration-200"
+          >
+            <Send className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -340,9 +368,15 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
   const [messages, setMessages] = useState<Message[]>([])
   const [originalQuery, setOriginalQuery] = useState('')
   const [parseError, setParseError] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null)
   const [attachedLink, setAttachedLink] = useState<SavedLink | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([])
+  const [askCount, setAskCount] = useState(0)
+
+  useEffect(() => {
+    setAskCount(loadAskCount())
+  }, [])
 
   useEffect(() => {
     setSavedLinks(getActiveLinks())
@@ -359,6 +393,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
     if (!profile) return
     verdictReceived.current = false
     setParseError(null)
+    setRejectionReason(null)
     reset()
 
     const finalText = await stream(
@@ -374,7 +409,13 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
       isFollowUp ? undefined : {
         onDone: (data, accumulated) => {
           verdictReceived.current = true
-          const raw = data as Omit<Verdict, 'id' | 'query' | 'createdAt'>
+          const raw = data as Omit<Verdict, 'id' | 'query' | 'createdAt'> & { rejected?: boolean; reason?: string }
+
+          if (raw.rejected) {
+            setRejectionReason(raw.reason ?? 'I only answer questions about developer tools, skills, and tech.')
+            return
+          }
+
           const verdict: Verdict = {
             ...raw,
             id: crypto.randomUUID(),
@@ -383,6 +424,8 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
           }
           setCurrentVerdict(verdict)
           logActivity('verdict_made')
+          incrementAskCount()
+          setAskCount(loadAskCount())
 
           const assistantMessage: Message = { role: 'assistant', content: accumulated }
           const newMessages: Message[] = [...threadMessages, assistantMessage]
@@ -404,13 +447,14 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
 
   const handleAsk = useCallback((overrideText?: string) => {
     const trimmed = (overrideText ?? inputValue).trim()
-    if (!trimmed || isStreaming) return
+    if (!trimmed || isStreaming || askCount >= MAX_ASKS) return
 
     const finalQuery = buildQuery(trimmed, attachedLink)
 
     setCurrentVerdict(null)
     setMessages([])
     setParseError(null)
+    setRejectionReason(null)
     setOriginalQuery(finalQuery)
     setInputValue('')
 
@@ -424,9 +468,17 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
   }
 
   const showStreamingCard = !currentVerdict && (isStreaming || parseError || !!streamError)
+  const atAskLimit = askCount >= MAX_ASKS
 
   return (
     <div className="space-y-5">
+      {/* Ask limit banner */}
+      {atAskLimit && (
+        <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-body-sm text-drift-text-tertiary text-center">
+          You&apos;ve used all {MAX_ASKS} free asks.
+        </div>
+      )}
+
       {/* Input bar */}
       <motion.div
         animate={{
@@ -435,7 +487,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
             : '0 0 0 1px rgba(255,255,255,0.06)'
         }}
         transition={{ duration: 0.2 }}
-        className="rounded-2xl bg-drift-surface backdrop-blur-xl overflow-hidden"
+        className={cn('rounded-2xl bg-drift-surface backdrop-blur-xl overflow-hidden', atAskLimit && 'opacity-50 pointer-events-none')}
       >
         <div className={cn('flex items-center gap-3 px-4 py-3.5', isStreaming && 'opacity-60 pointer-events-none')}>
           <Sparkles className="w-4 h-4 text-drift-text-tertiary shrink-0" strokeWidth={1.5} />
@@ -537,6 +589,24 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
         )}
       </AnimatePresence>
 
+      {/* Rejection card */}
+      <AnimatePresence>
+        {rejectionReason && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+          >
+            <DriftCard>
+              <div className="px-5 py-4">
+                <p className="text-body text-drift-text-tertiary">{rejectionReason}</p>
+              </div>
+            </DriftCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Streaming card */}
       <AnimatePresence>
         {showStreamingCard && (
@@ -584,7 +654,7 @@ function AskTab({ onSaveToHistory }: { onSaveToHistory: (v: StoredVerdict) => vo
       </AnimatePresence>
 
       {/* Empty state */}
-      {!isStreaming && !currentVerdict && !parseError && !streamError && (
+      {!isStreaming && !currentVerdict && !parseError && !streamError && !rejectionReason && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -676,7 +676,7 @@ export function DigestScreen({ profile, onUpdateContext, contextUpdatedAt }: Dig
         <div className="mb-8">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-label text-drift-text-tertiary tracking-[0.10em] mb-2">{today}</p>
+              <p className="text-label text-drift-text-tertiary tracking-[0.18em] mb-3">{today}</p>
               <h1 className="text-h1 text-drift-text-primary leading-none">Your Drift</h1>
               <div className="flex items-center gap-1.5 mt-2">
                 {isEditingContext ? (

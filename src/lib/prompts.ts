@@ -123,6 +123,9 @@ export function verdictSystemPrompt(profile: DriftProfile): string {
 
 ${buildProfileContext(profile)}
 
+TOPIC GUARD: You only answer questions about developer tools, programming languages, frameworks, libraries, tech skills, software engineering concepts, and career topics within tech. If the question is unrelated to software development or technology, return this JSON and nothing else:
+{ "rejected": true, "reason": "I only answer questions about developer tools, skills, and tech." }
+
 When asked "should I learn X?", give a real verdict. Not "it depends". Pick a position and defend it with the user's specific context in mind.
 
 Return a JSON object:
@@ -144,6 +147,8 @@ export function followUpSystemPrompt(profile: DriftProfile): string {
 ${buildProfileContext(profile)}
 
 The user has a verdict on their original question and is asking a follow-up. Answer it directly and specifically to their stack and context.
+
+TOPIC GUARD: Only answer follow-up questions that relate to the original tech/developer topic of this conversation. If a follow-up drifts to an unrelated subject, respond with exactly this sentence and nothing else: "I can only help with follow-up questions about the original topic."
 
 Rules:
 - Lead with a 1-sentence direct answer
