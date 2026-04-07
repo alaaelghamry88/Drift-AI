@@ -131,6 +131,8 @@ describe('createSavedLink', () => {
       type: 'article', tags: [], source: 'manual',
     })
     const diff = new Date(link.expiresAt).getTime() - new Date(link.savedAt).getTime()
-    expect(diff).toBe(7 * 24 * 60 * 60 * 1000)
+    const WEEK = 7 * 24 * 60 * 60 * 1000
+    expect(diff).toBeGreaterThanOrEqual(WEEK)
+    expect(diff).toBeLessThan(WEEK + 100) // allow up to 100ms execution skew
   })
 })
