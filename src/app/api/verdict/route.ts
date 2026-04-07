@@ -24,7 +24,48 @@ export async function POST(req: NextRequest) {
   })
 
   const encoder = new TextEncoder()
+  // Full accumulated text — kept intact for JSON extraction at the end
   let buffer = ''
+  // Pending input being scanned for <think> tags before emitting to client
+  let pending = ''
+  let inThink = false
+
+  function flush(controller: ReadableStreamDefaultController, final = false): void {
+    let visible = ''
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (inThink) {
+        const close = pending.indexOf('</think>')
+        if (close >= 0) {
+          inThink = false
+          pending = pending.slice(close + 8)
+          // skip the single newline that typically follows </think>
+          if (pending.startsWith('\n')) pending = pending.slice(1)
+        } else {
+          break // still inside <think>, wait for more chunks
+        }
+      } else {
+        const open = pending.indexOf('<think>')
+        if (open >= 0) {
+          visible += pending.slice(0, open)
+          inThink = true
+          pending = pending.slice(open + 7)
+        } else {
+          // No open tag found. On non-final flushes, hold back enough chars
+          // to detect a '<think>' that may be split across two chunks (6 chars).
+          const hold = final ? 0 : Math.min(6, pending.length)
+          visible += pending.slice(0, pending.length - hold)
+          pending = pending.slice(pending.length - hold)
+          break
+        }
+      }
+    }
+
+    if (visible) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: visible })}\n\n`))
+    }
+  }
 
   const readableStream = new ReadableStream({
     async start(controller) {
@@ -33,10 +74,11 @@ export async function POST(req: NextRequest) {
           const text = chunk.choices[0]?.delta?.content || ''
           if (text) {
             buffer += text
-            const data = JSON.stringify({ text })
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+            pending += text
+            flush(controller)
           }
         }
+        flush(controller, true)
 
         if (!isFollowUp) {
           try {
