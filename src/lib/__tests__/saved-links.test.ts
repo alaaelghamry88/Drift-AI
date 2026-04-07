@@ -24,6 +24,8 @@ const mockLink: SavedLink = {
   siteName: 'example.com',
   type: 'article',
   tags: ['test'],
+  collectionIds: [],
+  note: '',
   savedAt: '2026-01-01T00:00:00.000Z',
   expiresAt: '2026-01-08T00:00:00.000Z',
   status: 'active',

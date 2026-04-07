@@ -45,12 +45,14 @@ export function getActiveLinks(): SavedLink[] {
 }
 
 export function createSavedLink(
-  partial: Omit<SavedLink, 'id' | 'savedAt' | 'expiresAt' | 'status'>
+  partial: Omit<SavedLink, 'id' | 'savedAt' | 'expiresAt' | 'status' | 'collectionIds' | 'note'>
 ): SavedLink {
   const savedAt = new Date().toISOString()
   const expiresAt = new Date(Date.now() + EXPIRY_MS).toISOString()
   return {
     ...partial,
+    collectionIds: [],
+    note: '',
     id: crypto.randomUUID(),
     savedAt,
     expiresAt,

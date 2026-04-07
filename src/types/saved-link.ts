@@ -12,8 +12,10 @@ export interface SavedLink {
   siteName: string
   type: LinkType
   tags: string[]
-  savedAt: string    // ISO date
-  expiresAt: string  // savedAt + 7 days
+  collectionIds: string[]   // new — defaults to []
+  note: string              // new — defaults to ''
+  savedAt: string
+  expiresAt: string
   status: LinkStatus
   source: LinkSource
 }
