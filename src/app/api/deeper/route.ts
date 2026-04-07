@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { groq, MODEL } from '@/lib/claude'
+import { openrouter, DIGEST_MODEL } from '@/lib/ai'
 import { buildProfileContext } from '@/lib/prompts'
 import type { DriftProfile } from '@/types/profile'
 import type { DigestCard } from '@/types/digest'
@@ -7,8 +7,8 @@ import type { DigestCard } from '@/types/digest'
 export async function POST(req: NextRequest) {
   const { profile, card } = await req.json() as { profile: DriftProfile; card: DigestCard }
 
-  const stream = await groq.chat.completions.create({
-    model: MODEL,
+  const stream = await openrouter.chat.completions.create({
+    model: DIGEST_MODEL,
     max_tokens: 1024,
     messages: [
       {
