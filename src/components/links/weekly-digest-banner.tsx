@@ -8,9 +8,35 @@ import type { SavedLink } from '@/types/saved-link'
 import { useProfile } from '@/hooks/use-profile'
 
 const DISMISS_KEY = 'drift-digest-dismissed-at'
+const DIGEST_CACHE_KEY = 'drift-digest-cache'
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const DIGEST_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 const MIN_LINKS = 0 // TODO: restore to 7 before shipping
+
+interface DigestCache {
+  narrative: string
+  relevantIds: string[]
+  cachedAt: number
+}
+
+function readDigestCache(): DigestCache | null {
+  try {
+    const raw = localStorage.getItem(DIGEST_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as DigestCache
+    if (Date.now() - parsed.cachedAt > DIGEST_CACHE_TTL_MS) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeDigestCache(data: Omit<DigestCache, 'cachedAt'>): void {
+  try {
+    localStorage.setItem(DIGEST_CACHE_KEY, JSON.stringify({ ...data, cachedAt: Date.now() }))
+  } catch { /* ignore */ }
+}
 
 interface WeeklyDigestBannerProps {
   links: SavedLink[]
@@ -73,7 +99,9 @@ export function WeeklyDigestBanner({ links }: WeeklyDigestBannerProps) {
   const { profile } = useProfile()
   const [visible, setVisible] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [digest, setDigest] = useState<{ narrative: string; relevantIds: string[] } | null>(null)
+  const [digest, setDigest] = useState<{ narrative: string; relevantIds: string[] } | null>(
+    () => readDigestCache()
+  )
   const [mounted, setMounted] = useState(false)
 
   const recentLinks = getRecentLinks(links)
@@ -109,7 +137,10 @@ export function WeeklyDigestBanner({ links }: WeeklyDigestBannerProps) {
     })
       .then(r => r.json())
       .then((d: { narrative: string; relevantIds: string[] }) => {
-        if (d.narrative || d.relevantIds?.length) setDigest(d)
+        if (d.narrative || d.relevantIds?.length) {
+          setDigest(d)
+          writeDigestCache(d)
+        }
       })
       .catch(() => { /* silent fail */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
