@@ -237,20 +237,34 @@ If no clear cluster of 3+ links exists, return:
 Return ONLY the JSON object, no markdown fences`
 }
 
-export function linkDigestHeadlinePrompt(
-  links: Array<{ title: string; summary: string }>
+export function linkWeeklyDigestPrompt(
+  links: Array<{ id: string; title: string; summary: string; type: string; status: string }>,
+  currentContext: string
 ): string {
-  const list = links
-    .map((l, i) => `${i + 1}. ${l.title} — ${l.summary}`)
+  const allList = links
+    .map((l, i) => `${i + 1}. [${l.id}] (${l.type}, ${l.status}) ${l.title} — ${l.summary}`)
     .join('\n')
-  return `You are summarising a developer's weekly saved links in a single sentence.
 
-Links saved this week:
-${list}
+  const unreadIds = links
+    .filter(l => l.status === 'active')
+    .map(l => l.id)
 
-Write a single sentence (max 120 chars) describing the themes or topics they've been exploring. Be specific, not generic. No quotes around the sentence.
+  return `You are summarising a developer's weekly saved links and ranking unread ones by relevance.
 
-Return ONLY the sentence, no markdown, no trailing period`
+All links saved this week:
+${allList}
+
+Developer's current focus: "${currentContext || 'not specified'}"
+
+Tasks:
+1. Write a 2-3 sentence narrative paragraph about the recurring themes and topics in these links. Wrap 2-4 key topic phrases in **double asterisks** so they can be highlighted. Be specific and personal, not generic.
+2. From the unread links (status=active), rank their IDs by relevance to the developer's current focus. If currentContext is empty, rank by how interesting/actionable the link is. Return ALL unread IDs: ${JSON.stringify(unreadIds)}.
+
+Return ONLY a JSON object with this exact shape, no markdown fences:
+{
+  "narrative": "string",
+  "relevantIds": ["id1", "id2", ...]
+}`
 }
 
 export function linkScoringPrompt(

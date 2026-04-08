@@ -347,7 +347,7 @@ export default function DropPage() {
           </div>
         )}
 
-        <WeeklyDigestBanner links={links} collections={collections} />
+        <WeeklyDigestBanner links={links} />
 
         {clusterSuggestion && !clusterDismissed && (
           <ClusterNudge
