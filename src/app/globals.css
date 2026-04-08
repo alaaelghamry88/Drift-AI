@@ -391,3 +391,30 @@
     font-family: var(--font-heading);
   }
 }
+
+/* ─────────────────────────────────────────
+   Custom Scrollbar — .drift-scrollbar
+───────────────────────────────────────── */
+
+.drift-scrollbar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(77, 217, 192, 0.2) transparent;
+}
+
+.drift-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drift-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drift-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(77, 217, 192, 0.18);
+  border-radius: 99px;
+}
+
+.drift-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(77, 217, 192, 0.35);
+}

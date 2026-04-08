@@ -174,7 +174,7 @@ export function WeeklyDigestBanner({ links }: WeeklyDigestBannerProps) {
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[70%] z-[201] bg-[#0d1a28] border border-white/[0.07] rounded-2xl px-5 pt-5 pb-8 max-h-[80vh] overflow-y-auto overscroll-contain"
+                className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[60%] z-[201] bg-[#0d1a28] border border-white/[0.07] rounded-2xl px-5 pt-5 pb-8 max-h-[80vh] overflow-y-auto overscroll-contain drift-scrollbar"
               >
                 <div className="w-8 h-1 bg-white/[0.10] rounded-full mx-auto mb-5" />
 
