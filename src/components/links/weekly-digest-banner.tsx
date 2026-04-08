@@ -175,7 +175,7 @@ export function WeeklyDigestBanner({ links }: WeeklyDigestBannerProps) {
       >
         <BarChart2 className="w-4 h-4 text-drift-accent shrink-0" strokeWidth={1.5} />
         <div className="flex-1 min-w-0">
-          <p className="text-body-sm font-semibold text-drift-accent leading-tight">This week&rsquo;s recap</p>
+          <p className="text-[16px] font-semibold text-drift-accent leading-tight">This week&rsquo;s recap</p>
           <p className="text-label text-drift-text-tertiary mt-0.5">
             {recentLinks.length} saved · {unread.length} unread
           </p>

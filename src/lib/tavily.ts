@@ -60,7 +60,7 @@ async function searchTavily(query: string): Promise<TavilyResult[]> {
         search_depth: 'basic',
         max_results: 7,
         topic: 'news',
-        days: 14,
+        days: 7,
       }),
       signal: controller.signal,
     })
@@ -80,6 +80,14 @@ async function searchTavily(query: string): Promise<TavilyResult[]> {
   }
 }
 
+function filterThisWeek(results: TavilyResult[]): TavilyResult[] {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+  return results.filter(r => {
+    if (!r.published_date) return true // keep undated results
+    return new Date(r.published_date).getTime() >= cutoff
+  })
+}
+
 export async function fetchAINews(profile: DriftProfile): Promise<TavilyResult[]> {
   const queries = buildSearchQueries(profile)
   const settled = await Promise.allSettled(queries.map(searchTavily))
@@ -87,6 +95,7 @@ export async function fetchAINews(profile: DriftProfile): Promise<TavilyResult[]
     .filter((r): r is PromiseFulfilledResult<TavilyResult[]> => r.status === 'fulfilled')
     .flatMap(r => r.value)
   const unique = deduplicateByUrl(all)
-  const sorted = sortByRecency(unique)
+  const thisWeek = filterThisWeek(unique)
+  const sorted = sortByRecency(thisWeek)
   return sorted.slice(0, 20)
 }
